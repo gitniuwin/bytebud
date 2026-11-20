@@ -37,6 +37,10 @@ export default function PasswordResetPage({ token }) {
     <main className="ap-page">
       <section className="ap-form-side">
         <div className="ap-form-wrap">
+          <div className="ap-logo">
+            <img className="ap-logo-img" src="/bytebud-logo.png" alt="" />
+            <span className="ap-logo-name">ByteBud</span>
+          </div>
           <h1 className="ap-title">Choose a new password</h1>
           <p className="ap-subtitle">Your reset link can only be used once and expires after one hour.</p>
           {success ? (

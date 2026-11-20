@@ -55,13 +55,8 @@ html, body, #root {
 }
 
 .al-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 20px; color: #fff; text-decoration: none; }
-.al-logo, .al-logo-placeholder { width: 38px; height: 38px; border-radius: 9px; flex: 0 0 38px; }
+.al-logo { width: 38px; height: 38px; border-radius: 9px; flex: 0 0 38px; }
 .al-logo { object-fit: contain; }
-.al-logo-placeholder {
-  display: grid; place-items: center;
-  border: 1.5px dashed rgba(255, 255, 255, 0.35);
-  font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.6);
-}
 .al-brand-text { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .al-brand-text small { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; color: #e6a2b5; }
 

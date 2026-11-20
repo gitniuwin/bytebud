@@ -22,13 +22,7 @@ export default function Footer ({
       <div className="bb-footer-inner">
         <div className="bb-footer-col bb-footer-about">
           <div className="bb-footer-brand">
-            {logoSrc ? (
-              <img className="bb-footer-logo" src={logoSrc} alt="" />
-            ) : (
-              <span className="bb-footer-logo-placeholder" aria-hidden="true">
-                LOGO
-              </span>
-            )}
+            <img className="bb-footer-logo" src={logoSrc || "/bytebud-logo.png"} alt="" />
             <span className="bb-footer-name">ByteBud</span>
           </div>
           <p>

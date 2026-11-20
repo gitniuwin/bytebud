@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BatteryIcon, BuyerShell, CheckIcon, ChevronIcon, CrossIcon, InfoIcon, LaptopIcon, ShieldIcon, StatusChip, useNow } from "./BuyerShared";
+import { BatteryIcon, BuyerShell, CheckIcon, ChevronIcon, CrossIcon, InfoIcon, LaptopIcon, Modal, ShieldIcon, StatusChip, useNow } from "./BuyerShared";
 import {
   CPU_TIER_LABEL, courseFit, formatDate, formatPeso, formatRemaining, getPhotos, getPrefs, getPrice, isStudentVerified,
   setPrefs, similarUnits, toBool, unitName,
@@ -105,6 +105,7 @@ export default function LaptopDetailPage({
   const [tab, setTab] = useState("overview");
   const [photoIndex, setPhotoIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [error, setError] = useState("");
   const [courseId, setCourseId] = useState(() => {
     const saved = getPrefs().courseId;
@@ -171,6 +172,10 @@ export default function LaptopDetailPage({
   const unavailable = !["available", "reserved"].includes(status) || reservedByOther;
 
   const handleAdd = async () => {
+    if (!user) {
+      setAuthPromptOpen(true);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -181,6 +186,10 @@ export default function LaptopDetailPage({
       setBusy(false);
     }
   };
+
+  const returnTo = new URLSearchParams({ next: `/laptops/${encodeURIComponent(unit.unitId)}` });
+  const loginHref = `/login?${returnTo}`;
+  const registerHref = `/register?${returnTo}`;
 
   const handleRemove = async () => {
     setBusy(true);
@@ -514,6 +523,14 @@ export default function LaptopDetailPage({
         </div>
         <div className="ld-mobile-action">{action}</div>
       </div>
+      <Modal open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} title="Log in to reserve this laptop"
+        footer={<>
+          <a className="by-btn by-btn-outline" href={registerHref} onClick={(event) => go(event, registerHref)}>Create an account</a>
+          <a className="by-btn by-btn-primary" href={loginHref} onClick={(event) => go(event, loginHref)}>Log in</a>
+        </>}
+      >
+        <p>Log in or create an account to reserve this laptop and add it to your cart.</p>
+      </Modal>
     </BuyerShell>
   );
 }

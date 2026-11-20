@@ -7,7 +7,7 @@ import "./AuthPage.css";
  * Usage (e.g. with React Router, routes /login and /register):
  *   <AuthPage
  *     initialMode="login"             // "login" | "register"
- *     logoSrc="/logo.svg"             // optional: leave out to show the placeholder
+ *     logoSrc="/logo.svg"             // optional custom logo
  *     onLogin={async ({ email, password }) => { ... }}
  *     onRegister={async ({ fullName, phone, email, password }) => { ... }}
  *     showForgotPassword             // display the forgot-password link on login
@@ -103,19 +103,12 @@ function MailCheckIcon() {
   );
 }
 
-/* ---------- Logo (placeholder until the real logo is added) ---------- */
+/* ---------- Logo ---------- */
 
 function Logo({ logoSrc }) {
   return (
     <div className="ap-logo">
-      {logoSrc ? (
-        <img className="ap-logo-img" src={logoSrc} alt="ByteBud logo" />
-      ) : (
-        // LOGO PLACEHOLDER: pass logoSrc to AuthPage (or replace this block with your <img />).
-        <div className="ap-logo-placeholder" aria-hidden="true">
-          LOGO
-        </div>
-      )}
+      <img className="ap-logo-img" src={logoSrc || "/bytebud-logo.png"} alt="" />
       <span className="ap-logo-name">ByteBud</span>
     </div>
   );
@@ -125,6 +118,7 @@ function Logo({ logoSrc }) {
 
 export default function AuthPage({
   initialMode = "login",
+  onBackToStore,
   logoSrc,
   onLogin = demoHandler("login"),
   onRegister = demoHandler("register"),
@@ -396,6 +390,7 @@ export default function AuthPage({
         </header>
 
         <div className="ap-form-wrap">
+          {onBackToStore && <button type="button" className="ap-link ap-back-to-store" onClick={onBackToStore}>Back to storefront</button>}
           <h1 className="ap-title">{isRegister ? "Create your account" : "Welcome back"}</h1>
           <p className="ap-subtitle">
             {isRegister

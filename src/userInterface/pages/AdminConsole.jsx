@@ -7,7 +7,21 @@ import AcquisitionsTab from "../components/AcquisitionsTab";
 import SuppliersTab from "../components/SuppliersTab";
 import PasswordRequestsPanel from "../components/PasswordRequestsPanel";
 import AuditClearPanel from "../components/AuditClearPanel";
-import { Drawer, Modal, formatDateTime, formatPeso } from "./AdminShared";
+import { Drawer, Modal, StatusBadge, formatDateTime, formatPeso } from "./AdminShared";
+
+const verificationStatuses = [
+  { value: "pending", label: "Pending", tone: "amber" },
+  { value: "approved", label: "Approved", tone: "green" },
+  { value: "rejected", label: "Rejected", tone: "red" },
+];
+const orderStatuses = [
+  { value: "pending", label: "Pending", tone: "amber" },
+  { value: "confirmed", label: "Confirmed", tone: "burgundy" },
+  { value: "ready_for_pickup", label: "Ready for pickup", tone: "green" },
+  { value: "picked_up", label: "Picked up", tone: "dark" },
+  { value: "cancelled", label: "Cancelled", tone: "grey" },
+];
+const statusColumns = { verifStatus: verificationStatuses, orderStatus: orderStatuses };
 
 const emptyData = {
   units: [], acquisitions: [], suppliers: [], orders: [], student_verifications: [],
@@ -26,6 +40,7 @@ const searchPlaceholders = {
   catalog: "Search catalog records",
 };
 const labels = {
+  orderStatus: "Order status",
   orderNo: "Order", fullName: "Name", email: "Email", phone: "Phone", role: "Role", isActive: "Active",
   verifStatus: "Status", schoolEmail: "School email", expiresAt: "Expires", companyName: "Supplier", sourceType: "Source",
   invoiceNo: "Invoice", totalCost: "Total cost", acqStatus: "Status", serialNumber: "Serial number",
@@ -183,6 +198,10 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState(null);
   const [expiresAt, setExpiresAt] = useState("");
+  const [verificationDecision, setVerificationDecision] = useState("");
+  const [verificationRemarks, setVerificationRemarks] = useState("");
+  const [verificationSaving, setVerificationSaving] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
   const [proofUrl, setProofUrl] = useState("");
   const [proofLoading, setProofLoading] = useState(false);
   const [proofError, setProofError] = useState("");
@@ -234,19 +253,39 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
       setStaffForm(false); setStaff({ fullName: "", email: "", phone: "", password: "" });
     }
   };
-  const approveVerification = async () => {
-    if (!selected || !expiresAt) return;
-    const ok = await mutate(`/student_verifications/${selected.verificationId}`, { method: "PATCH", body: {
-      verifStatus: "approved", expiresAt: new Date(`${expiresAt}T23:59:59`).toISOString(), remarks: selected.remarks || "",
-    } });
-    if (ok) setSelected(null);
+  const startVerificationDecision = (decision) => {
+    setVerificationError("");
+    setExpiresAt("");
+    setVerificationRemarks(selected.remarks || "");
+    setVerificationDecision(decision);
   };
-  const rejectVerification = async () => {
-    if (!selected) return;
-    const remarks = window.prompt("Reason for rejection:", selected.remarks || "");
-    if (remarks === null) return;
-    const ok = await mutate(`/student_verifications/${selected.verificationId}`, { method: "PATCH", body: { verifStatus: "rejected", remarks } });
-    if (ok) setSelected(null);
+  const cancelVerificationDecision = () => {
+    if (!verificationSaving) setVerificationDecision("");
+  };
+  const submitVerificationDecision = async (event) => {
+    event.preventDefault();
+    if (!selected || !verificationDecision || verificationSaving) return;
+    const body = { verifStatus: verificationDecision, remarks: verificationRemarks };
+    if (verificationDecision === "approved") {
+      const expiry = new Date(`${expiresAt}T23:59:59`);
+      if (!expiresAt || !(expiry > new Date())) {
+        setVerificationError("Choose a valid expiry date.");
+        return;
+      }
+      body.expiresAt = expiry.toISOString();
+    }
+    setVerificationSaving(true);
+    setVerificationError("");
+    try {
+      await adminRequest(`/student_verifications/${selected.verificationId}`, { method: "PATCH", body });
+      setVerificationDecision("");
+      setSelected(null);
+      await refresh();
+    } catch (error) {
+      setVerificationError(error.message || "Could not update the student verification.");
+    } finally {
+      setVerificationSaving(false);
+    }
   };
   const loadVerificationProof = async (row) => {
     setProofUrl("");
@@ -263,7 +302,6 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
   };
   const openVerification = (row) => {
     setSelected(row);
-    setExpiresAt("");
     setMessage("");
     loadVerificationProof(row);
   };
@@ -300,17 +338,18 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
         const user = users.find((u) => u.userId === row.userId || u.userId === row.adminId);
         const view = { ...row, fullName: user?.fullName || "—" };
         return <tr key={row.userId || row.orderId || row.verificationId || row.logId || row.courseId || row.modelId} onClick={() => { if (["orders", "audit_logs"].includes(collection)) setSelected(row); else if (collection === "student_verifications") openVerification(row); }}>
-        {fields.map((f) => <td key={f}>{display(f, f === "adminId" && collection === "audit_logs" ? view.fullName : f === "userId" && collection === "student_verifications" ? view.fullName : view[f])}</td>)}
-        {showActions && <td>
-          {collection === "student_verifications" && row.verifStatus === "pending" && <>
-            <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={(e) => { e.stopPropagation(); openVerification(row); }}>Review</button>
-          </>}
+        {fields.map((f) => <td key={f}>{statusColumns[f]
+          ? <StatusBadge list={statusColumns[f]} value={view[f]} />
+          : display(f, f === "adminId" && collection === "audit_logs" ? view.fullName : f === "userId" && collection === "student_verifications" ? view.fullName : view[f])}</td>)}
+        {showActions && <td><div className="ad-action-buttons">
+          {collection === "student_verifications" &&
+            <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={(e) => { e.stopPropagation(); openVerification(row); }}>View</button>}
           {collection === "orders" && <OrderStatusButtons order={row} mutate={mutate} onSeeDetails={() => setSelected(row)} />}
           {collection === "users" && row.role !== "admin" && <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => mutate(`/users/${row.userId}/active`, { method: "PATCH", body: { isActive: !row.isActive } })}>{row.isActive ? "Deactivate" : "Activate"}</button>}
           {collection === "users" && row.role !== "admin" && <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={async (e) => { e.stopPropagation(); if (!window.confirm(`Set a new temporary password for ${row.fullName}?`)) return; setMessage(""); try { const r = await adminRequest(`/users/${row.userId}/temp-password`, { method: "POST", body: {} }); window.alert(`Temporary password for ${row.fullName}:\n\n${r.tempPassword}\n\nShown only once. Give it to the customer and ask them to change it in My Account.`); } catch (err) { setMessage(err.message); } }}>Set temp password</button>}
           {collection === "users" && row.role === "buyer" && <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={async (e) => { e.stopPropagation(); if (!window.confirm(`Permanently delete ${row.fullName}? This only works for customers with no orders or other records.`)) return; await mutate(`/users/${row.userId}`, { method: "DELETE" }); }}>Delete</button>}
           {collection === "catalog" && admin.role === "admin" && <CatalogEdit row={row} refresh={refresh} />}
-        </td>}
+        </div></td>}
       </tr>})}</tbody></table></div>}
     {(!view || view === "orders") && !filtered.length && <div className="ad-empty"><strong>No records</strong></div>}
     {collection === "orders" && <>
@@ -332,32 +371,59 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
           </select></td>
         </tr>)}</tbody></table></div>{!filteredClaims.length && <div className="ad-empty"><strong>No warranty claims</strong></div>}</>}
     </>}
-    {selected && collection === "student_verifications" && <Modal open onClose={() => setSelected(null)} title="Review student verification" size="lg">
+    {selected && collection === "student_verifications" && !verificationDecision && <Modal open onClose={() => setSelected(null)} title="Review student verification" size="lg"
+      footer={selected.verifStatus === "pending" && <>
+        <button type="button" className="ad-btn ad-btn-danger" onClick={() => startVerificationDecision("rejected")}>Reject</button>
+        <button type="button" className="ad-btn ad-btn-primary" onClick={() => startVerificationDecision("approved")}>Approve</button>
+      </>}
+    >
       <div className="ad-verification-person"><div><span className="ad-review-eyebrow">STUDENT PRICING APPLICATION</span><h3>{users.find((u) => u.userId === selected.userId)?.fullName || selected.userId}</h3></div><span className={`ad-review-status is-${String(selected.verifStatus || "pending").toLowerCase()}`}>{String(selected.verifStatus || "pending").replaceAll("_", " ")}</span></div>
       <section className="ad-section ad-review-card"><h3 className="ad-section-title">Applicant details</h3><p><b>Status:</b> {selected.verifStatus}</p><p><b>Submitted:</b> {display("submittedAt", selected.submittedAt)}</p>
         {proofLoading ? <div className="ad-review-no-proof">Loading submitted proof...</div>
           : proofError ? <div className="ad-review-no-proof is-error"><p>{proofError}</p><button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadVerificationProof(selected)}>Try again</button></div>
           : proofUrl ? <>
-            <a href={proofUrl} target="_blank" rel="noreferrer">Open submitted proof</a>
             {/^data:image\//i.test(proofUrl) || /\.(png|jpe?g|gif|webp)(?:[?#]|$)/i.test(proofUrl)
-              ? <div className="ad-proof-frame"><img src={proofUrl} alt="Submitted Certificate of Registration (COR)" onError={() => setProofError("The submitted image could not be displayed. Try opening the full-size proof.")} /></div>
+              ? <div className="ad-proof-frame"><img src={proofUrl} alt="Submitted Certificate of Registration (COR)" onError={() => setProofError("The submitted image could not be displayed.")} /></div>
               : <iframe title="Submitted proof document" src={proofUrl} className="ad-proof-document" />}
           </> : <p>No proof URL attached.</p>}
         <p><b>Remarks:</b> {selected.remarks || "—"}</p>
       </section>
-      {selected.verifStatus === "pending" && <section className="ad-section ad-review-approval"><label>Student pricing valid through<input required type="date" min={new Date().toISOString().slice(0, 10)} value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} /></label><div className="ad-inline-form">
-        <button disabled={!expiresAt} className="ad-btn ad-btn-primary" onClick={async () => { const ok = await mutate(`/student_verifications/${selected.verificationId}`, { method: "PATCH", body: { verifStatus: "approved", expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : null, remarks: selected.remarks || "" } }); if (ok) setSelected(null); }}>Approve</button>
-        <button className="ad-btn ad-btn-ghost" onClick={async () => { const remarks = window.prompt("Reason for rejection:", selected.remarks || ""); if (remarks === null) return; const ok = await mutate(`/student_verifications/${selected.verificationId}`, { method: "PATCH", body: { verifStatus: "rejected", remarks } }); if (ok) setSelected(null); }}>Reject</button>
-      </div></section>}
     </Modal>}
-    {selected && collection === "orders" && <Drawer open onClose={() => setSelected(null)} title={`Order ${selected.orderNo}`} subtitle={`Placed ${display("orderCreatedAt", selected.orderCreatedAt)}`}>
+    {selected && verificationDecision && <Modal open onClose={cancelVerificationDecision}
+      title={verificationDecision === "approved" ? "Approve student verification" : "Reject student verification"}
+      footer={<>
+        <button type="button" className="ad-btn ad-btn-ghost" onClick={cancelVerificationDecision} disabled={verificationSaving}>Cancel</button>
+        <button type="submit" form="student-verification-decision" className={`ad-btn ${verificationDecision === "approved" ? "ad-btn-primary" : "ad-btn-danger"}`}
+          disabled={verificationSaving || (verificationDecision === "approved" && !expiresAt)}>
+          {verificationSaving ? "Saving…" : verificationDecision === "approved" ? "Approve" : "Confirm"}
+        </button>
+      </>}
+    >
+      <form id="student-verification-decision" onSubmit={submitVerificationDecision}>
+        {verificationDecision === "approved" ? (
+          <label className="ad-field">Student pricing valid through
+            <input className="ad-input" type="date" required min={new Date().toLocaleDateString("sv-SE")}
+              value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} disabled={verificationSaving} />
+          </label>
+        ) : (
+          <>
+            <p>Reject this application for student pricing?</p>
+            <label className="ad-field">Reason for rejection (optional)
+              <textarea value={verificationRemarks} onChange={(event) => setVerificationRemarks(event.target.value)} disabled={verificationSaving} />
+            </label>
+          </>
+        )}
+        {verificationError && <p className="ad-error" role="alert">{verificationError}</p>}
+      </form>
+    </Modal>}
+    {selected && collection === "orders" && <Modal open onClose={() => setSelected(null)} title={`Order ${selected.orderNo}`} subtitle={`Placed ${display("orderCreatedAt", selected.orderCreatedAt)}`} size="lg">
       {(() => { const customer = users.find((u) => u.userId === selected.userId); return <>
         <section className="ad-section"><h3 className="ad-section-title">Customer</h3><p>{customer?.fullName || selected.userId}</p><p>{customer?.email || ""}{customer?.phone ? ` · ${customer.phone}` : ""}</p></section>
         <section className="ad-section"><h3 className="ad-section-title">Order details</h3><p><b>Status:</b> {selected.orderStatus}</p><p><b>Pickup:</b> {display("pickupDate", selected.pickupDate)}</p><p><b>Picked up:</b> {display("pickedUpAt", selected.pickedUpAt)}</p><p><b>Subtotal:</b> {formatPeso(selected.subtotal)} · <b>Discount:</b> {formatPeso(selected.discountTotal)} · <b>Total:</b> {formatPeso(selected.total)}</p><p><b>Payment:</b> {selected.payment?.method || "—"} / {selected.payment?.payStatus || "—"}{selected.payment?.reference ? ` · ${selected.payment.reference}` : ""}</p><p><b>Verification:</b> {selected.verificationId || "None"}</p></section>
         <section className="ad-section"><h3 className="ad-section-title">Items</h3>{(selected.orderItems || []).map((item, i) => { const unit = units.find((u) => u.unitId === item.unitId); return <article className="ad-card" key={item.unitId || i}><b>{item.snapshot?.snapBrand} {item.snapshot?.snapModelName}</b><p>Serial: {item.snapshot?.snapSerialNumber || unit?.serialNumber || "—"}</p><p>Sale price: {formatPeso(item.priceAtSale)} · Return deadline: {display("returnDeadline", item.returnDeadline)}</p></article>; })}</section>
         <section className="ad-section"><h3 className="ad-section-title">Status history</h3>{(selected.statusHistory || []).map((h, i) => <p key={i}>{h.newStatus} · {display("changedAt", h.changedAt)}</p>)}</section>
       </>; })()}
-    </Drawer>}
+    </Modal>}
     {selected && collection === "audit_logs" && <Drawer open onClose={() => setSelected(null)} title={`${selected.action} ${selected.targetCollection}`} subtitle={`${users.find((u) => u.userId === selected.adminId)?.fullName || "Staff"} · ${display("logCreatedAt", selected.logCreatedAt)}`}>
       <section className="ad-section"><h3 className="ad-section-title">Record</h3><p><b>Collection:</b> {selected.targetCollection}</p><p><b>Target ID:</b> {selected.targetId || "—"}</p></section>
       <section className="ad-section"><h3 className="ad-section-title">Before</h3><pre className="ad-json">{JSON.stringify(selected.changes?.before ?? null, null, 2)}</pre></section>

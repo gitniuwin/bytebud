@@ -35,8 +35,7 @@
   margin-bottom: 14px;
 }
 
-.bb-footer-logo,
-.bb-footer-logo-placeholder {
+.bb-footer-logo {
   width: 36px;
   height: 36px;
   border-radius: 9px;
@@ -45,16 +44,6 @@
 .bb-footer-logo {
   display: block;
   object-fit: contain;
-}
-
-.bb-footer-logo-placeholder {
-  display: grid;
-  place-items: center;
-  border: 1.5px dashed rgba(255, 255, 255, 0.35);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.6);
 }
 
 .bb-footer-name {
