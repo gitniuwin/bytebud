@@ -97,12 +97,7 @@ export default function AdminLayout({
     <div className="al-shell">
       <aside className={`al-sidebar ${menuOpen ? "is-open" : ""}`} aria-label="Admin navigation">
         <a className="al-brand" href="/admin" onClick={(e) => go(e, "/admin")}>
-          {logoSrc ? (
-            <img className="al-logo" src={logoSrc} alt="" />
-          ) : (
-            // LOGO PLACEHOLDER: pass logoSrc or replace this block with your <img />.
-            <span className="al-logo-placeholder" aria-hidden="true">LOGO</span>
-          )}
+          <img className="al-logo" src={logoSrc || "/bytebud-logo.png"} alt="" />
           <span className="al-brand-text">
             ByteBud <small>{roleLabel}</small>
           </span>

@@ -55,6 +55,10 @@ export const fetchCart = () => request("/api/cart");
 export const reserveCartItem = (unitId) => request("/api/cart/items", { method: "POST", body: { unitId } });
 export const removeCartItem = (unitId) => request(`/api/cart/items/${encodeURIComponent(unitId)}`, { method: "DELETE" });
 export const placeOrder = (payload) => request("/api/orders", { method: "POST", body: payload });
+export const transferMethods = { GCash: "gcash", "Bank transfer": "bank-transfer" };
+export const submitPaymentReference = (orderNo, method, reference) => request(`/api/orders/${encodeURIComponent(orderNo)}/${transferMethods[method]}-reference`, {
+  method: "PATCH", body: { reference },
+});
 export const fetchMyAccount = () => request("/api/account");
 export const saveMyProfile = (payload) => request("/api/account/profile", { method: "PATCH", body: payload });
 export const changeMyPassword = (payload) => request("/api/account/password", { method: "PATCH", body: payload });

@@ -63,25 +63,11 @@ body,
   gap: 16px;
 }
 
-/* Logo (placeholder + real image share the same slot) */
+/* Logo */
 .ap-logo {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.ap-logo-placeholder {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1.5px dashed #b9b4ba;
-  border-radius: 10px;
-  background: var(--ap-subtle);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ap-muted);
 }
 
 .ap-logo-img {
@@ -327,6 +313,8 @@ body,
 }
 
 /* Footer switch */
+.ap-back-to-store { margin-bottom: 16px; }
+
 .ap-switch {
   margin: 22px 0 0;
   text-align: center;

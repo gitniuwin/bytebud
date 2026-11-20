@@ -48,8 +48,7 @@
   text-decoration: none;
 }
 
-.bb-nav-logo,
-.bb-nav-logo-placeholder {
+.bb-nav-logo {
   width: 38px;
   height: 38px;
   border-radius: 9px;
@@ -58,17 +57,6 @@
 .bb-nav-logo {
   display: block;
   object-fit: contain;
-}
-
-.bb-nav-logo-placeholder {
-  display: grid;
-  place-items: center;
-  border: 1.5px dashed #b9b4ba;
-  background: var(--bb-subtle);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--bb-muted);
 }
 
 .bb-nav-name {
@@ -170,6 +158,23 @@
 .bb-nav-account-btn:hover {
   border-color: #c9c5ca;
   background: var(--bb-subtle);
+}
+
+.bb-nav-account-btn.bb-nav-auth-link {
+  padding: 0 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bb-nav-account-btn.bb-nav-signup {
+  border-color: var(--bb-burgundy);
+  background: var(--bb-burgundy);
+  color: #fff;
+}
+
+.bb-nav-account-btn.bb-nav-signup:hover {
+  border-color: var(--bb-burgundy-dark);
+  background: var(--bb-burgundy-dark);
 }
 
 .bb-nav-avatar {
@@ -279,6 +284,13 @@
   .bb-nav-menu-mobile {
     display: block;
   }
+}
+
+@media (max-width: 380px) {
+  .bb-nav-inner { gap: 8px; }
+  .bb-nav-actions { gap: 4px; }
+  .bb-nav-cart { width: 32px; }
+  .bb-nav-account-btn.bb-nav-auth-link { padding: 0 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

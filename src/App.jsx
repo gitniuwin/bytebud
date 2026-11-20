@@ -16,7 +16,7 @@ export default function App() {
   const [session, setSession] = useState(null); // { user, verification }
   const [checking, setChecking] = useState(!!getToken());
   const [catalog, setCatalog] = useState({ courses: [], units: [] });
-  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [cartItems, setCartItems] = useState([]);
   const [cartLoading, setCartLoading] = useState(false);
@@ -24,7 +24,8 @@ export default function App() {
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountError, setAccountError] = useState("");
   const [pathname, setPathname] = useState(window.location.pathname);
-  const resetToken = new URLSearchParams(window.location.search).get("resetToken");
+  const routeParams = new URLSearchParams(window.location.search);
+  const resetToken = routeParams.get("resetToken");
 
   useEffect(() => {
     const onPop = () => setPathname(window.location.pathname);
@@ -39,8 +40,9 @@ export default function App() {
     }
   }, [session, pathname]);
 
-  const navigate = (href) => {
-    window.history.pushState({}, "", href);
+  const navigate = (href, { replace = false } = {}) => {
+    if (replace) window.history.replaceState({}, "", href);
+    else window.history.pushState({}, "", href);
     setPathname(window.location.pathname);
     const hash = new URL(href, window.location.origin).hash.slice(1);
     setTimeout(() => {
@@ -65,17 +67,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) {
-      setCatalog({ courses: [], units: [] });
-      setCartItems([]);
-      setCatalogLoading(false);
-      setCatalogError("");
-      return undefined;
-    }
-
     let active = true;
-    setCatalogLoading(true);
-    setCatalogError("");
     fetchHomeCatalog()
       .then((data) => {
         if (active) setCatalog({ courses: data.courses || [], units: data.units || [] });
@@ -90,7 +82,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, []);
 
   const loadAccount = useCallback(async (showLoading = false) => {
     if (showLoading) setAccountLoading(true);
@@ -168,37 +160,45 @@ export default function App() {
 
   if (checking) return null;
 
-  if (!session) {
+  const authRoute = pathname === "/login" || pathname === "/register";
+  const buyerRoute = pathname === "/checkout" || pathname === "/account";
+  const adminRoute = pathname.startsWith("/admin");
+  if (!session && (authRoute || buyerRoute || adminRoute)) {
+    const requestedProduct = routeParams.get("next") || "";
+    const returnTo = buyerRoute ? pathname + window.location.search
+      : /^\/laptops\/[\w-]+$/.test(requestedProduct) ? requestedProduct : "/";
+    const finishAuth = (next) => {
+      setSession(next);
+      navigate(["admin", "staff"].includes(next.user.role) ? "/admin" : returnTo, { replace: true });
+    };
     return (
       <AuthPage
+        initialMode={pathname === "/register" ? "register" : "login"}
+        onBackToStore={() => navigate(returnTo.startsWith("/laptops/") ? returnTo : "/")}
         showForgotPassword
         onForgotPassword={forgotPassword}
         onCheckResetStatus={checkResetStatus}
-        onCompleteReset={async (payload) => setSession(await completeApprovedReset(payload))}
-        onLogin={async (credentials) => {
-          const next = await login(credentials);
-          setSession(next);
-          if (["admin", "staff"].includes(next.user.role)) navigate("/admin");
-        }}
-        onRegister={async (payload) => setSession(await register(payload))}
+        onCompleteReset={async (payload) => finishAuth(await completeApprovedReset(payload))}
+        onLogin={async (credentials) => finishAuth(await login(credentials))}
+        onRegister={async (payload) => finishAuth(await register(payload))}
       />
     );
   }
 
-  if (pathname.startsWith("/admin")) {
-    if (["admin", "staff"].includes(session.user.role)) {
+  if (adminRoute || authRoute) {
+    if (["admin", "staff"].includes(session?.user.role)) {
       return <AdminConsole admin={session.user} pathname={pathname} onNavigate={navigate} onLogout={logoutBuyer} />;
     }
   }
 
-  if (pathname === "/checkout" && session.user.role === "buyer") return <CartCheckoutPage
+  if (pathname === "/checkout" && session?.user.role === "buyer") return <CartCheckoutPage
     units={catalog.units} cartItems={cartItems} user={session.user}
     verifications={session.verification ? [session.verification] : []}
     loading={catalogLoading || cartLoading} onRemoveFromCart={deleteCartItem}
     onPlaceOrder={submitOrder} onNavigate={navigate} onLogout={logoutBuyer}
   />;
 
-  if (pathname === "/account" && session.user.role === "buyer") return <MyAccountPage
+  if (pathname === "/account" && session?.user.role === "buyer") return <MyAccountPage
     initialTab={new URLSearchParams(window.location.search).get("tab")}
     user={session.user} orders={accountData.orders} warranties={accountData.warranties}
     verifications={accountData.verifications} cartCount={cartItems.length}
@@ -210,23 +210,23 @@ export default function App() {
     onNavigate={navigate} onLogout={logoutBuyer}
   />;
 
-  if ((pathname === "/about" || pathname === "/warranty") && session.user.role === "buyer") {
+  if (pathname === "/about" || pathname === "/warranty") {
     const Page = pathname === "/about" ? AboutPage : WarrantyPage;
-    return <Page pathname={pathname} user={session.user} cartCount={cartItems.length} onNavigate={navigate} onLogout={logoutBuyer} />;
+    return <Page pathname={pathname} user={session?.user} cartCount={cartItems.length} onNavigate={navigate} onLogout={logoutBuyer} />;
   }
 
   const laptopMatch = pathname.match(/^\/laptops\/([^/]+)\/?$/);
-  if (laptopMatch && session.user.role === "buyer") return <LaptopDetailPage
+  if (laptopMatch && (!session || session.user.role === "buyer")) return <LaptopDetailPage
     unitId={decodeURIComponent(laptopMatch[1])} units={catalog.units} courses={catalog.courses}
-    user={session.user} verifications={session.verification ? [session.verification] : []} cartItems={cartItems}
-    loading={catalogLoading} logoSrc={undefined} onAddToCart={addCartItem} onRemoveFromCart={deleteCartItem}
+    user={session?.user} verifications={session?.verification ? [session.verification] : []} cartItems={cartItems}
+    loading={catalogLoading} onAddToCart={addCartItem} onRemoveFromCart={deleteCartItem}
     onNavigate={navigate} onLogout={logoutBuyer}
   />;
 
   return (
     <HomePage
-      user={session.user}
-      verification={session.verification ?? null}
+      user={session?.user ?? null}
+      verification={session?.verification ?? null}
       courses={catalog.courses}
       units={catalog.units}
       cartCount={cartItems.length}

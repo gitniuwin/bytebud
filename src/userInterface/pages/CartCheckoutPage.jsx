@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { BuyerShell, CheckIcon, ChevronIcon, ClockIcon, Field, LaptopIcon, ShieldIcon, StatusChip, TrashIcon, useNow } from "./BuyerShared";
 import { formatDate, formatPeso, formatRemaining, getPhotos, getPrice, isStudentVerified, unitName } from "./buyerUtils";
 import "./LaptopDetailPage.css";
+import { transferMethods } from "../../api";
+import TransferPaymentCard from "../components/TransferPaymentCard";
 import "./CartCheckoutPage.css";
 
 /**
@@ -193,6 +195,11 @@ export default function CartCheckoutPage({
             {placed.discountTotal > 0 && <div><dt>Student discount</dt><dd className="is-green">-{formatPeso(placed.discountTotal)}</dd></div>}
             <div className="is-total"><dt>Total</dt><dd>{formatPeso(placed.total)}</dd></div>
           </dl>
+
+          {Object.hasOwn(transferMethods, placed.paymentMethod) && (
+            <TransferPaymentCard method={placed.paymentMethod} orderNo={placed.orderNo} total={placed.total} payment={placed.payment}
+              onPaymentChange={(payment) => setPlaced((current) => ({ ...current, payment }))} />
+          )}
 
           <p className="by-note cc-success-note">
             Your warranty and return period start on the day you pick up your laptop. Bring your order number when you come.

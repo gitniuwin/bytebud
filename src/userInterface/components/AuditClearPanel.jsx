@@ -30,7 +30,7 @@ export default function AuditClearPanel({ onDone }) {
     <section className="ad-panel">
       <h2 className="ad-section-title">Clear old history</h2>
       <p style={{ margin: "0 0 10px", fontSize: 13.5 }}>Keep the last
-        {" "}<input type="number" min="1" max="120" value={months} onChange={(e) => setMonths(e.target.value)} style={{ width: 70, height: 34, padding: "0 8px" }} aria-label="Months of history to keep" />{" "}
+        {" "}<input className="ad-input" type="number" min="1" max="120" value={months} onChange={(e) => setMonths(e.target.value)} style={{ width: 70, height: 34, padding: "0 8px" }} aria-label="Months of history to keep" />{" "}
         month(s) and delete everything older. The cleanup itself is recorded in the history.</p>
       {error && <p className="ad-error" role="alert">{error}</p>}
       {note && <p role="status">{note}</p>}

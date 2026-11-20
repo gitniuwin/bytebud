@@ -7,7 +7,7 @@ import "./NavbarHome.css";
  * <Navbar
  *   user={{ fullName, role }}      // Users.fullName, Users.role
  *   cartCount={cart.cartItems.length}   // Carts.cartItems[] length
- *   logoSrc="/logo.svg"            // optional: placeholder shown when missing
+ *   logoSrc="/logo.svg"            // optional custom logo
  *   onLogout={() => { ... }}
  * />
  *
@@ -81,14 +81,7 @@ export default function Navbar({
     <header className="bb-nav">
       <div className="bb-nav-inner">
         <a className="bb-nav-brand" href={homeHref} aria-label="ByteBud home" onClick={(e) => handleNavigate(e, homeHref)}>
-          {logoSrc ? (
-            <img className="bb-nav-logo" src={logoSrc} alt="" />
-          ) : (
-            // LOGO PLACEHOLDER: pass logoSrc or replace this block with your <img />.
-            <span className="bb-nav-logo-placeholder" aria-hidden="true">
-              LOGO
-            </span>
-          )}
+          <img className="bb-nav-logo" src={logoSrc || "/bytebud-logo.png"} alt="" />
           <span className="bb-nav-name">ByteBud</span>
         </a>
 
@@ -104,7 +97,7 @@ export default function Navbar({
             {cartCount > 0 && <span className="bb-nav-badge">{cartCount > 99 ? "99+" : cartCount}</span>}
           </a>
 
-          <div className="bb-nav-account" ref={menuRef}>
+          {user ? <div className="bb-nav-account" ref={menuRef}>
             <button
               type="button"
               className="bb-nav-account-btn"
@@ -125,9 +118,11 @@ export default function Navbar({
                 <a className="bb-nav-menu-item bb-nav-menu-mobile" role="menuitem" href={homeHref} onClick={(e) => handleNavigate(e, homeHref)}>
                   Find a Laptop
                 </a>
-                <a className="bb-nav-menu-item" role="menuitem" href={accountHref} onClick={(e) => handleNavigate(e, accountHref)}>
-                  My account
-                </a>
+                {user.role === "buyer" && (
+                  <a className="bb-nav-menu-item" role="menuitem" href={accountHref} onClick={(e) => handleNavigate(e, accountHref)}>
+                    My account
+                  </a>
+                )}
                 {isStaff && (
                   <a className="bb-nav-menu-item" role="menuitem" href={adminHref} onClick={(e) => handleNavigate(e, adminHref)}>
                     Dashboard
@@ -146,7 +141,10 @@ export default function Navbar({
                 </button>
               </div>
             )}
-          </div>
+          </div> : <>
+            <a className="bb-nav-account-btn bb-nav-auth-link" href="/login" onClick={(e) => handleNavigate(e, "/login")}>Log in</a>
+            <a className="bb-nav-account-btn bb-nav-auth-link bb-nav-signup" href="/register" onClick={(e) => handleNavigate(e, "/register")}>Sign up</a>
+          </>}
         </div>
       </div>
     </header>
