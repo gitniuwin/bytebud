@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { adminRequest } from "../../api";
+import { adminRequest, transferMethods } from "../../api";
 import AdminDashboard from "./AdminDashboard";
 import AdminLayout from "./AdminLayout";
 import UnitsTab from "../components/UnitsTab";
@@ -197,6 +197,8 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
   const [staff, setStaff] = useState({ fullName: "", email: "", phone: "", password: "" });
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState(null);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
   const [expiresAt, setExpiresAt] = useState("");
   const [verificationDecision, setVerificationDecision] = useState("");
   const [verificationRemarks, setVerificationRemarks] = useState("");
@@ -251,6 +253,22 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
     event.preventDefault();
     if (await mutate("/users", { method: "POST", body: staff })) {
       setStaffForm(false); setStaff({ fullName: "", email: "", phone: "", password: "" });
+    }
+  };
+  const verifyTransferPayment = async () => {
+    if (paymentSaving) return;
+    const { orderId, payment: { method } } = selected;
+    if (!window.confirm("Mark this order as paid after matching the reference and total against the received transfer?")) return;
+    setPaymentSaving(true);
+    setPaymentError(null);
+    try {
+      const { payment } = await adminRequest(`/orders/${orderId}/${transferMethods[method]}-payment`, { method: "PATCH" });
+      setSelected((order) => order?.orderId === orderId ? { ...order, payment } : order);
+      await refresh();
+    } catch (error) {
+      setPaymentError({ orderId, message: error.message || "Could not mark this payment as paid." });
+    } finally {
+      setPaymentSaving(false);
     }
   };
   const startVerificationDecision = (decision) => {
@@ -420,6 +438,15 @@ function RecordsTable({ title, collection, view = "", rows, warranties = [], use
       {(() => { const customer = users.find((u) => u.userId === selected.userId); return <>
         <section className="ad-section"><h3 className="ad-section-title">Customer</h3><p>{customer?.fullName || selected.userId}</p><p>{customer?.email || ""}{customer?.phone ? ` · ${customer.phone}` : ""}</p></section>
         <section className="ad-section"><h3 className="ad-section-title">Order details</h3><p><b>Status:</b> {selected.orderStatus}</p><p><b>Pickup:</b> {display("pickupDate", selected.pickupDate)}</p><p><b>Picked up:</b> {display("pickedUpAt", selected.pickedUpAt)}</p><p><b>Subtotal:</b> {formatPeso(selected.subtotal)} · <b>Discount:</b> {formatPeso(selected.discountTotal)} · <b>Total:</b> {formatPeso(selected.total)}</p><p><b>Payment:</b> {selected.payment?.method || "—"} / {selected.payment?.payStatus || "—"}{selected.payment?.reference ? ` · ${selected.payment.reference}` : ""}</p><p><b>Verification:</b> {selected.verificationId || "None"}</p></section>
+        {Object.hasOwn(transferMethods, selected.payment?.method) && selected.payment.reference && selected.orderStatus !== "cancelled"
+          && ["under_review", "pending", "unpaid", ""].includes(selected.payment.payStatus) && <section className="ad-section">
+            <h3 className="ad-section-title">Review {selected.payment.method} payment</h3>
+            <p>Match reference <strong>{selected.payment.reference}</strong> and amount <strong>{formatPeso(selected.total)}</strong> against the received transfer.</p>
+            {paymentError?.orderId === selected.orderId && <p className="ad-error" role="alert">{paymentError.message}</p>}
+            <button type="button" className="ad-btn ad-btn-primary" onClick={verifyTransferPayment} disabled={paymentSaving}>
+              {paymentSaving ? "Saving…" : "Mark as paid"}
+            </button>
+          </section>}
         <section className="ad-section"><h3 className="ad-section-title">Items</h3>{(selected.orderItems || []).map((item, i) => { const unit = units.find((u) => u.unitId === item.unitId); return <article className="ad-card" key={item.unitId || i}><b>{item.snapshot?.snapBrand} {item.snapshot?.snapModelName}</b><p>Serial: {item.snapshot?.snapSerialNumber || unit?.serialNumber || "—"}</p><p>Sale price: {formatPeso(item.priceAtSale)} · Return deadline: {display("returnDeadline", item.returnDeadline)}</p></article>; })}</section>
         <section className="ad-section"><h3 className="ad-section-title">Status history</h3>{(selected.statusHistory || []).map((h, i) => <p key={i}>{h.newStatus} · {display("changedAt", h.changedAt)}</p>)}</section>
       </>; })()}

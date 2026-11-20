@@ -539,6 +539,37 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   res.json({ user: publicUser(req.user), verification: await latestVerification(req.user._id) });
 });
 
+const transferMethods = { gcash: "GCash", "bank-transfer": "Bank transfer" };
+
+app.patch("/api/orders/:orderNo/:method(gcash|bank-transfer)-reference", requireAuth, requireBuyer, async (req, res) => {
+  const method = transferMethods[req.params.method.toLowerCase()];
+  const isGCash = method === "GCash";
+  const reference = typeof req.body?.reference === "string" ? req.body.reference.trim() : "";
+  const validReference = isGCash ? /^[0-9]{6,32}$/ : /^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,63}$/;
+  if (!validReference.test(reference)) {
+    return res.status(400).json({ message: isGCash
+      ? "Enter the numeric reference from your GCash receipt."
+      : "Enter a bank transaction reference of up to 64 characters using letters, numbers, spaces, or . _ / -." });
+  }
+  try {
+    const order = await Order.findOneAndUpdate({
+      orderNo: req.params.orderNo,
+      userId: req.user._id,
+      orderStatus: { $ne: "cancelled" },
+      "payment.method": method,
+      "payment.payStatus": { $in: ["pending", "unpaid", ""] },
+      "payment.reference": { $in: ["", null] },
+    }, {
+      $set: { "payment.reference": reference, "payment.payStatus": "under_review" },
+    }, { new: true });
+    if (!order) return res.status(409).json({ message: "This order cannot accept a payment reference. Check your order details." });
+    res.json({ payment: order.payment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not submit the payment reference." });
+  }
+});
+
 app.get("/api/account", requireAuth, requireBuyer, async (req, res) => {
   try {
     const [orders, warranties, verifications] = await Promise.all([
@@ -1009,6 +1040,27 @@ app.patch("/api/admin/warranties/:id/claims/:index", requireAuth, requireStaff, 
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not update the warranty claim." });
+  }
+});
+
+app.patch("/api/admin/orders/:id/:method(gcash|bank-transfer)-payment", requireAuth, requireStaff, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid order." });
+  try {
+    const order = await Order.findOneAndUpdate({
+      _id: req.params.id,
+      orderStatus: { $ne: "cancelled" },
+      "payment.method": transferMethods[req.params.method.toLowerCase()],
+      "payment.payStatus": { $in: ["under_review", "pending", "unpaid", ""] },
+      "payment.reference": { $type: "string", $ne: "" },
+    }, {
+      $set: { "payment.payStatus": "paid", "payment.paidAt": new Date() },
+    }, { new: true });
+    if (!order) return res.status(409).json({ message: "This order has no payment waiting for review." });
+    await writeAudit(req, "update", "orders", order).catch(console.error);
+    res.json({ payment: order.payment });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not verify the payment." });
   }
 });
 

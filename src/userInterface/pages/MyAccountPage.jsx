@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { BuyerShell, ChevronIcon, ClockIcon, Drawer, Field, LaptopIcon, Modal, ShieldIcon, StatusChip, Toast, useNow, useToast } from "./BuyerShared";
+import { BuyerShell, CheckIcon, ChevronIcon, ClockIcon, Drawer, Field, LaptopIcon, Modal, ShieldIcon, StatusChip, Toast, useNow, useToast } from "./BuyerShared";
 import { formatDate, formatPeso } from "./buyerUtils";
+import { transferMethods } from "../../api";
+import TransferPaymentCard from "../components/TransferPaymentCard";
 import "./MyAccountPage.css";
 
 /**
@@ -47,6 +49,7 @@ const ORDER_STATUS = {
 const PAY_STATUS = {
   pending: { label: "Pending", tone: "amber" },
   unpaid: { label: "Unpaid", tone: "amber" },
+  under_review: { label: "Under review", tone: "amber" },
   paid: { label: "Paid", tone: "green" },
   refunded: { label: "Refunded", tone: "grey" },
 };
@@ -118,17 +121,26 @@ function OrdersTab({ orders, onOpen, go }) {
     <section aria-labelledby="ma-orders-title">
       <h2 id="ma-orders-title" className="ma-h2">Your orders</h2>
       <div className="ma-orders-head" aria-hidden="true">
-        <span>Order</span><span>Date</span><span>Status</span><span className="is-right">Total</span><span />
+        <span>Order</span><span>Date</span><span>Order status</span><span>Payment status</span><span className="is-right">Total</span><span />
       </div>
       <ul className="ma-orders">
         {orders.map((o) => {
           const s = statusMeta(ORDER_STATUS, o.orderStatus);
+          const payment = o.payment?.payStatus ? statusMeta(PAY_STATUS, o.payment.payStatus) : null;
           return (
             <li key={o.orderId}>
-              <button type="button" className="ma-order" onClick={() => onOpen(o.orderId)} aria-label={`View order ${o.orderNo}`}>
+              <button type="button" className="ma-order" onClick={() => onOpen(o.orderId)}
+                aria-label={`View order ${o.orderNo}. Order status: ${s.label}. Payment status: ${payment?.label || "unavailable"}.`}>
                 <strong className="ma-order-no">{o.orderNo}</strong>
                 <span className="ma-order-date">{formatDate(o.orderCreatedAt)}</span>
-                <span className="ma-order-status"><StatusChip tone={s.tone}>{s.label}</StatusChip></span>
+                <span className="ma-order-status">
+                  <span className="ma-order-status-label">Order status</span>
+                  <StatusChip tone={s.tone}>{s.label}</StatusChip>
+                </span>
+                <span className="ma-order-payment">
+                  <span className="ma-order-status-label">Payment status</span>
+                  {payment ? <StatusChip tone={payment.tone}>{payment.label}</StatusChip> : "—"}
+                </span>
                 <span className="ma-order-total">{formatPeso(o.total)}</span>
                 <span className="ma-order-go"><ChevronIcon /></span>
               </button>
@@ -140,7 +152,7 @@ function OrdersTab({ orders, onOpen, go }) {
   );
 }
 
-function OrderDrawer({ order, onClose, onGoWarranty }) {
+function OrderDrawer({ order, onClose, onGoWarranty, onPaymentChange }) {
   const s = statusMeta(ORDER_STATUS, order?.orderStatus);
   const history = order ? [...(order.statusHistory || [])].sort((a, b) => toTime(a.changedAt) - toTime(b.changedAt)) : [];
   const pay = order?.payment || {};
@@ -215,7 +227,10 @@ function OrderDrawer({ order, onClose, onGoWarranty }) {
             </dl>
           </section>
 
-          <section className="ma-section">
+          {Object.hasOwn(transferMethods, pay.method) && order.orderStatus !== "cancelled" ? (
+            <TransferPaymentCard key={order.orderNo} method={pay.method} orderNo={order.orderNo} total={order.total} payment={pay}
+              onPaymentChange={(payment) => onPaymentChange(order.orderId, payment)} />
+          ) : <section className="ma-section">
             <h3 className="ma-h3">Payment</h3>
             <dl className="ma-kv">
               <div><dt>Method</dt><dd>{pay.method || "-"}</dd></div>
@@ -223,7 +238,7 @@ function OrderDrawer({ order, onClose, onGoWarranty }) {
               {pay.reference && <div><dt>Reference</dt><dd>{pay.reference}</dd></div>}
               {pay.paidAt && <div><dt>Paid on</dt><dd>{formatDate(pay.paidAt)}</dd></div>}
             </dl>
-          </section>
+          </section>}
 
           <section className="ma-section">
             <h3 className="ma-h3">Totals</h3>
@@ -483,7 +498,7 @@ function ReturnModal({ target, onClose, onSubmit }) {
 
 /* ---------- Student Verification tab ---------- */
 
-function VerificationTab({ records, now, onSubmit }) {
+function getVerificationStatus(records, now) {
   const sorted = [...records].sort((a, b) => toTime(b.submittedAt || b.verifiedAt) - toTime(a.submittedAt || a.verifiedAt));
   const latest = sorted[0] || null;
   const activeApproved = records.find((r) => r.verifStatus === "approved" && r.expiresAt && toTime(r.expiresAt) > now);
@@ -492,8 +507,11 @@ function VerificationTab({ records, now, onSubmit }) {
   if (activeApproved) key = "approved";
   else if (latest) key = latest.verifStatus === "pending" ? "pending" : latest.verifStatus === "rejected" ? "rejected" : latest.verifStatus === "approved" ? "expired" : "none";
 
+  return { key, sorted, shown: activeApproved || latest };
+}
+
+function VerificationTab({ status: { key, sorted, shown }, now, onSubmit }) {
   const meta = VERIF_STATUS[key];
-  const shown = key === "approved" ? activeApproved : latest;
   const canSubmit = ["none", "rejected", "expired"].includes(key);
 
   const text = {
@@ -796,6 +814,8 @@ export default function MyAccountPage({
   const [toast, notify] = useToast();
   const tabRefs = useRef({});
   const now = useNow(60000, true);
+  const verificationStatus = getVerificationStatus(localVerifs, now);
+  const buyerName = user?.fullName?.trim();
 
   // Pick up fresh data after the parent refetches.
   useEffect(() => setLocalOrders(orders), [orders]);
@@ -873,8 +893,19 @@ export default function MyAccountPage({
 
   return (
     <BuyerShell active="account" {...shell}>
-      <h1 className="by-heading">My account</h1>
-      <p className="by-subheading">Track your orders, manage your warranty and returns, and keep your student status up to date.</p>
+      <div className="ma-account-heading">
+        <h1 className="by-heading">{buyerName ? `Hi, ${buyerName}!` : "Hi there!"}</h1>
+        {!error && (verificationStatus.key === "approved" ? (
+          <StatusChip tone="green"><CheckIcon size={14} /> Student discount verified</StatusChip>
+        ) : (
+          <button type="button" className="by-chip tone-amber ma-verification-link" onClick={() => {
+            selectTab("verification");
+            tabRefs.current.verification?.focus();
+          }}>
+            {verificationStatus.key === "pending" ? "Student verification under review" : "Verify for a student discount"}
+          </button>
+        ))}
+      </div>
       {error && <div className="by-alert" role="alert">{error} <button type="button" className="by-link" onClick={onRetry}>Retry</button></div>}
 
       <div className="ma-tabs" role="tablist" aria-label="Account sections" onKeyDown={onTabKey}>
@@ -908,7 +939,7 @@ export default function MyAccountPage({
             goOrders={() => selectTab("orders")}
           />
         )}
-        {tab === "verification" && <VerificationTab records={localVerifs} now={now} onSubmit={() => setProofOpen(true)} />}
+        {tab === "verification" && <VerificationTab status={verificationStatus} now={now} onSubmit={() => setProofOpen(true)} />}
         {tab === "profile" && (
           <ProfileTab
             user={user}
@@ -923,6 +954,9 @@ export default function MyAccountPage({
 
       <OrderDrawer
         order={openOrder}
+        onPaymentChange={(orderId, payment) => setLocalOrders((current) =>
+          current.map((order) => order.orderId === orderId ? { ...order, payment } : order)
+        )}
         onClose={() => setOpenOrderId(null)}
         onGoWarranty={() => { setOpenOrderId(null); selectTab("warranty"); }}
       />

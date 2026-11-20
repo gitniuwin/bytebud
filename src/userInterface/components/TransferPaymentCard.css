@@ -1,0 +1,26 @@
+.transfer-card {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid var(--by-border);
+  border-radius: 16px;
+  background: var(--by-surface);
+  text-align: left;
+}
+.transfer-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.transfer-card h3, .transfer-card p { margin: 0; }
+.transfer-card-head strong { color: var(--by-burgundy); font-size: 20px; }
+.transfer-card p { color: var(--by-muted); font-size: 14px; }
+.transfer-card > .by-chip { justify-self: start; }
+.transfer-instructions, .transfer-form { display: grid; gap: 10px; }
+.transfer-qr { display: grid; justify-items: center; gap: 8px; }
+.transfer-qr img { width: min(180px, 100%); height: auto; }
+.transfer-recipient { margin: 0; }
+.transfer-recipient > div { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 0; }
+.transfer-recipient dt { color: var(--by-muted); }
+.transfer-recipient dd { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; }
+.transfer-form label { font-weight: 600; }
+.transfer-form input { min-width: 0; min-height: 42px; padding: 8px 12px; border: 1px solid var(--by-border); border-radius: 10px; font: inherit; }
+.transfer-form [role="alert"] { color: #a5211b; }
