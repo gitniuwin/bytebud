@@ -140,13 +140,13 @@ export default function UnitsTab({
     <div className="iv-panel">
       <div className="iv-toolbar">
         <div className="iv-filters">
-          <select className="ad-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
+          <select className="adm-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
             <option value="">All statuses</option>
             {UNIT_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
-          <select className="ad-select" value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} aria-label="Filter by grade">
+          <select className="adm-select" value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} aria-label="Filter by grade">
             <option value="">All grades</option>
             {GRADES.map((g) => (
               <option key={g.value} value={g.value}>{g.label}</option>
@@ -158,19 +158,19 @@ export default function UnitsTab({
             </button>
           )}
         </div>
-        <button type="button" className="ad-btn ad-btn-primary" onClick={() => setSelectedId("new")}>
+        <button type="button" className="adm-btn adm-btn-primary" onClick={() => setSelectedId("new")}>
           <PlusIcon /> Add unit
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="ad-empty">
+        <div className="adm-empty">
           <strong>No units found</strong>
           Try another search or filter, or add a unit.
         </div>
       ) : (
-        <div className="ad-table-wrap">
-          <table className="ad-table">
+        <div className="adm-table-wrap">
+          <table className="adm-table">
             <thead>
               <tr>
                 <th>Serial number</th>
@@ -185,10 +185,10 @@ export default function UnitsTab({
               {rows.map((u) => (
                 <tr key={u.unitId} onClick={() => setSelectedId(u.unitId)}>
                   <td>
-                    <button type="button" className="ad-row-btn" onClick={(e) => { e.stopPropagation(); setSelectedId(u.unitId); }}>
+                    <button type="button" className="adm-row-btn" onClick={(e) => { e.stopPropagation(); setSelectedId(u.unitId); }}>
                       {u.serialNumber}
                     </button>
-                    {String(u.serialNumber).startsWith("TBA-") && <span className="ad-cell-sub">Serial number needed</span>}
+                    {String(u.serialNumber).startsWith("TBA-") && <span className="adm-cell-sub">Serial number needed</span>}
                   </td>
                   <td>{modelLabel(u.modelId)}</td>
                   <td>{u.conditionGrade ? `Grade ${u.conditionGrade}` : "-"}</td>
@@ -411,10 +411,10 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
   const footer =
     tab === "details" || tab === "listing" ? (
       <>
-        <button type="button" className="ad-btn ad-btn-ghost" onClick={onClose}>
+        <button type="button" className="adm-btn adm-btn-ghost" onClick={onClose}>
           {isNew ? "Cancel" : "Close"}
         </button>
-        <button type="button" className="ad-btn ad-btn-primary" onClick={handleSave} disabled={busy}>
+        <button type="button" className="adm-btn adm-btn-primary" onClick={handleSave} disabled={busy}>
           {busy ? "Saving..." : isNew ? "Add unit" : "Save changes"}
         </button>
       </>
@@ -436,7 +436,7 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
     >
       {/* ================= Details ================= */}
       {tab === "details" && (
-        <div className="ad-form-grid">
+        <div className="adm-form-grid">
           <Field label="Serial number" htmlFor="u-serial" error={errors.serialNumber} hint={String(draft.serialNumber).startsWith("TBA-") ? "Temporary value: enter the real serial number." : undefined}>
             <input id="u-serial" type="text" value={draft.serialNumber} aria-invalid={!!errors.serialNumber}
               onChange={(e) => { set("serialNumber", e.target.value); clearError("serialNumber"); }} />
@@ -504,7 +504,7 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
               onChange={(e) => { set("estimatedBatteryHrs", e.target.value); clearError("estimatedBatteryHrs"); }} />
           </Field>
 
-          <div className="span-2 ad-section-title" style={{ margin: "6px 0 -4px" }}>Actual specs of this unit</div>
+          <div className="span-2 adm-section-title" style={{ margin: "6px 0 -4px" }}>Actual specs of this unit</div>
 
           <Field label="RAM (GB)" htmlFor="u-ram" error={errors.actualRamGb}>
             <input id="u-ram" type="number" min="0" value={draft.actualSpecs.actualRamGb ?? ""} aria-invalid={!!errors.actualRamGb}
@@ -551,19 +551,19 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
 
       {/* ================= Inspection ================= */}
       {tab === "inspection" && (
-        <div className="ad-section">
+        <div className="adm-section">
           <div className="iv-section-head">
-            <h3 className="ad-section-title">Inspection history</h3>
+            <h3 className="adm-section-title">Inspection history</h3>
             {!inspForm && (
-              <button type="button" className="ad-btn ad-btn-primary ad-btn-sm" onClick={startInspection}>
+              <button type="button" className="adm-btn adm-btn-primary adm-btn-sm" onClick={startInspection}>
                 <PlusIcon /> Record inspection
               </button>
             )}
           </div>
 
           {inspForm && (
-            <form className="ad-card iv-form" onSubmit={submitInspection} noValidate>
-              <p className="ad-hint">Tick each check the unit passed. Inspector: {admin.fullName}.</p>
+            <form className="adm-card iv-form" onSubmit={submitInspection} noValidate>
+              <p className="adm-hint">Tick each check the unit passed. Inspector: {admin.fullName}.</p>
               <div className="iv-checks">
                 {[
                   ["screenOk", "Screen works"],
@@ -572,9 +572,9 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
                   ["batteryOk", "Battery holds a charge"],
                   ["dataWiped", "Data wiped"],
                 ].map(([key, label]) => (
-                  <label key={key} className="ad-check">
+                  <label key={key} className="adm-check">
                     <input type="checkbox" checked={inspForm[key]} onChange={(e) => setCheck(key, e.target.checked)} />
-                    <span className="ad-check-box" aria-hidden="true" />
+                    <span className="adm-check-box" aria-hidden="true" />
                     {label}
                   </label>
                 ))}
@@ -591,27 +591,27 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
                 <textarea id="i-notes" value={inspForm.inspectNotes} onChange={(e) => setCheck("inspectNotes", e.target.value)} />
               </Field>
 
-              <label className="ad-check">
+              <label className="adm-check">
                 <input type="checkbox" checked={inspForm.passed}
                   onChange={(e) => setInspForm((f) => ({ ...f, passed: e.target.checked, touched: true }))} />
-                <span className="ad-check-box" aria-hidden="true" />
+                <span className="adm-check-box" aria-hidden="true" />
                 Mark this inspection as passed
               </label>
 
               <div className="iv-form-actions">
-                <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setInspForm(null)}>Cancel</button>
-                <button type="submit" className="ad-btn ad-btn-primary ad-btn-sm" disabled={busy}>Save inspection</button>
+                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setInspForm(null)}>Cancel</button>
+                <button type="submit" className="adm-btn adm-btn-primary adm-btn-sm" disabled={busy}>Save inspection</button>
               </div>
             </form>
           )}
 
           {saved.inspections.length === 0 && !inspForm ? (
-            <div className="ad-empty"><strong>No inspection yet</strong>Record the first inspection to make this unit ready to list.</div>
+            <div className="adm-empty"><strong>No inspection yet</strong>Record the first inspection to make this unit ready to list.</div>
           ) : (
             [...saved.inspections].sort(byNewest("inspectedAt")).map((i, idx) => (
-              <div key={`${i.inspectedAt}-${idx}`} className="ad-card">
+              <div key={`${i.inspectedAt}-${idx}`} className="adm-card">
                 <div className="iv-entry-head">
-                  <span className={`ad-badge tone-${i.passed ? "green" : "red"}`}>{i.passed ? "Passed" : "Failed"}</span>
+                  <span className={`adm-badge tone-${i.passed ? "green" : "red"}`}>{i.passed ? "Passed" : "Failed"}</span>
                   <span className="iv-entry-meta">{formatDateTime(i.inspectedAt)} by {nameOf(i.inspectedBy)}</span>
                 </div>
                 <ul className="iv-checklist">
@@ -631,11 +631,11 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
 
       {/* ================= Repairs ================= */}
       {tab === "repairs" && (
-        <div className="ad-section">
+        <div className="adm-section">
           <div className="iv-section-head">
-            <h3 className="ad-section-title">Repair history</h3>
+            <h3 className="adm-section-title">Repair history</h3>
             {!repairForm && (
-              <button type="button" className="ad-btn ad-btn-primary ad-btn-sm"
+              <button type="button" className="adm-btn adm-btn-primary adm-btn-sm"
                 onClick={() => setRepairForm({ partReplaced: "", partCost: "", laborCost: "", repairNotes: "", errors: {} })}>
                 <PlusIcon /> Add repair
               </button>
@@ -649,10 +649,10 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
           </dl>}
 
           {saved.unitStatus === "in_repair" && !repairForm && (
-            <div className="ad-note is-warn">
+            <div className="adm-note is-warn">
               This unit is in repair. When the work is done, send it back for another inspection.
               <div style={{ marginTop: 10 }}>
-                <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" disabled={busy}
+                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" disabled={busy}
                   onClick={() => commitPartial({ unitStatus: "awaiting_inspection" }, "Unit sent back to inspection.")}>
                   Repair finished: send to inspection
                 </button>
@@ -661,9 +661,9 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
           )}
 
           {repairForm && (
-            <form className="ad-card iv-form" onSubmit={submitRepair} noValidate>
-              <p className="ad-hint">Recorded by {admin.fullName}.</p>
-              <div className="ad-form-grid">
+            <form className="adm-card iv-form" onSubmit={submitRepair} noValidate>
+              <p className="adm-hint">Recorded by {admin.fullName}.</p>
+              <div className="adm-form-grid">
                 <Field label="Part replaced or fixed" htmlFor="r-part" className="span-2" error={repairForm.errors?.partReplaced}>
                   <input id="r-part" type="text" placeholder="e.g. Battery, RAM upgrade, keyboard" value={repairForm.partReplaced}
                     aria-invalid={!!repairForm.errors?.partReplaced}
@@ -680,17 +680,17 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
                 </Field>
               </div>
               <div className="iv-form-actions">
-                <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setRepairForm(null)}>Cancel</button>
-                <button type="submit" className="ad-btn ad-btn-primary ad-btn-sm" disabled={busy}>Save repair</button>
+                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setRepairForm(null)}>Cancel</button>
+                <button type="submit" className="adm-btn adm-btn-primary adm-btn-sm" disabled={busy}>Save repair</button>
               </div>
             </form>
           )}
 
           {saved.repairs.length === 0 && !repairForm ? (
-            <div className="ad-empty"><strong>No repairs</strong>Repairs and their costs will appear here.</div>
+            <div className="adm-empty"><strong>No repairs</strong>Repairs and their costs will appear here.</div>
           ) : (
             [...saved.repairs].sort(byNewest("repairedAt")).map((r, idx) => (
-              <div key={`${r.repairedAt}-${idx}`} className="ad-card">
+              <div key={`${r.repairedAt}-${idx}`} className="adm-card">
                 <div className="iv-entry-head">
                   <strong>{r.partReplaced}</strong>
                   <span className="iv-entry-cost">{formatPeso((Number(r.partCost) || 0) + (Number(r.laborCost) || 0))}</span>
@@ -707,8 +707,8 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
       {/* ================= Listing ================= */}
       {tab === "listing" && (
         <>
-          <div className="ad-section">
-            <h3 className="ad-section-title">Store listing</h3>
+          <div className="adm-section">
+            <h3 className="adm-section-title">Store listing</h3>
 
             <ul className="iv-ready">
               <li className={checks.inspection ? "is-ok" : ""}>{checks.inspection ? <CheckIcon /> : <CrossIcon />} Latest inspection passed</li>
@@ -716,7 +716,7 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
               <li className={checks.photo ? "is-ok" : ""}>{checks.photo ? <CheckIcon /> : <CrossIcon />} At least one photo</li>
             </ul>
 
-            <div className="ad-form-grid">
+            <div className="adm-form-grid">
               <Field label="Price (PHP)" htmlFor="l-price" error={errors.price}>
                 <input id="l-price" type="number" min="0" value={draft.listing.price ?? ""} aria-invalid={!!errors.price}
                   onChange={(e) => { setListing("price", e.target.value); clearError("price"); }} />
@@ -735,10 +735,10 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
             </div>
           </div>
 
-          <div className="ad-section">
-            <h3 className="ad-section-title">Photos</h3>
+          <div className="adm-section">
+            <h3 className="adm-section-title">Photos</h3>
             {draft.listing.photos.length === 0 ? (
-              <p className="ad-hint">No photos yet. Paste an image link below.</p>
+              <p className="adm-hint">No photos yet. Paste an image link below.</p>
             ) : (
               <ul className="iv-photos">
                 {draft.listing.photos.map((p, i) => (
@@ -748,12 +748,12 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
                       <ImageIcon />
                     </span>
                     <span className="iv-photo-url">{p.photoUrl || "(empty link)"}</span>
-                    <label className="ad-check">
+                    <label className="adm-check">
                       <input type="radio" name="primary-photo" checked={!!p.isPrimary} onChange={() => setPrimary(i)} />
-                      <span className="ad-check-box" aria-hidden="true" style={{ borderRadius: "50%" }} />
+                      <span className="adm-check-box" aria-hidden="true" style={{ borderRadius: "50%" }} />
                       Primary
                     </label>
-                    <button type="button" className="ad-icon-btn" aria-label="Remove photo" onClick={() => removePhoto(i)}>
+                    <button type="button" className="adm-icon-btn" aria-label="Remove photo" onClick={() => removePhoto(i)}>
                       <TrashIcon />
                     </button>
                   </li>
@@ -761,28 +761,28 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
               </ul>
             )}
             <div className="iv-add-photo">
-              <input type="url" className="ad-input" placeholder="https://..." aria-label="Photo link" value={photoUrl}
+              <input type="url" className="adm-input" placeholder="https://..." aria-label="Photo link" value={photoUrl}
                 onChange={(e) => setPhotoUrl(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPhoto(); } }} />
-              <button type="button" className="ad-btn ad-btn-ghost" onClick={addPhoto}>Add photo</button>
+              <button type="button" className="adm-btn adm-btn-ghost" onClick={addPhoto}>Add photo</button>
             </div>
           </div>
 
           {!isNew && (
-            <div className="ad-section">
-              <h3 className="ad-section-title">Publish</h3>
+            <div className="adm-section">
+              <h3 className="adm-section-title">Publish</h3>
               {isPublished ? (
                 <>
-                  <p className="ad-hint">This laptop is live in the store.</p>
-                  <button type="button" className="ad-btn ad-btn-danger" onClick={unpublish} disabled={busy}>Unpublish</button>
+                  <p className="adm-hint">This laptop is live in the store.</p>
+                  <button type="button" className="adm-btn adm-btn-danger" onClick={unpublish} disabled={busy}>Unpublish</button>
                 </>
               ) : canPublish ? (
                 <>
-                  <p className="ad-hint">All checks passed. Publishing makes the unit available to buyers.</p>
-                  <button type="button" className="ad-btn ad-btn-primary" onClick={publish} disabled={busy}>Publish to store</button>
+                  <p className="adm-hint">All checks passed. Publishing makes the unit available to buyers.</p>
+                  <button type="button" className="adm-btn adm-btn-primary" onClick={publish} disabled={busy}>Publish to store</button>
                 </>
               ) : (
-                <p className="ad-note is-warn">
+                <p className="adm-note is-warn">
                   {["ready", "ready_to_list"].includes(saved.unitStatus)
                     ? "Complete the checklist above, then publish."
                     : saved.unitStatus === "reserved" || saved.unitStatus === "sold"

@@ -91,26 +91,26 @@ export default function AcquisitionsTab({
     <div className="iv-panel">
       <div className="iv-toolbar">
         <div className="iv-filters">
-          <select className="ad-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} aria-label="Filter by status">
+          <select className="adm-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} aria-label="Filter by status">
             <option value="">All statuses</option>
             {ACQ_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </div>
-        <button type="button" className="ad-btn ad-btn-primary" onClick={() => setSelectedId("new")}>
+        <button type="button" className="adm-btn adm-btn-primary" onClick={() => setSelectedId("new")}>
           <PlusIcon /> New acquisition
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="ad-empty">
+        <div className="adm-empty">
           <strong>No acquisitions found</strong>
           Record a purchase from a supplier to start a new batch.
         </div>
       ) : (
-        <div className="ad-table-wrap">
-          <table className="ad-table">
+        <div className="adm-table-wrap">
+          <table className="adm-table">
             <thead>
               <tr>
                 <th>Invoice no.</th>
@@ -127,7 +127,7 @@ export default function AcquisitionsTab({
               {rows.map((a) => (
                 <tr key={a.acquisitionId} onClick={() => setSelectedId(a.acquisitionId)}>
                   <td>
-                    <button type="button" className="ad-row-btn" onClick={(e) => { e.stopPropagation(); setSelectedId(a.acquisitionId); }}>
+                    <button type="button" className="adm-row-btn" onClick={(e) => { e.stopPropagation(); setSelectedId(a.acquisitionId); }}>
                       {a.invoiceNo}
                     </button>
                   </td>
@@ -235,13 +235,13 @@ function AcquisitionDrawer({ acquisition, isNew, acquisitions, suppliers, models
   const footer = (
     <>
       {!isNew && saved.acqStatus === "received" && (
-        <button type="button" className="ad-btn ad-btn-ghost iv-footer-left" onClick={() => setConfirmSplit(true)} disabled={dirty || busy} title={dirty ? "Save your changes first" : undefined}>
+        <button type="button" className="adm-btn adm-btn-ghost iv-footer-left" onClick={() => setConfirmSplit(true)} disabled={dirty || busy} title={dirty ? "Save your changes first" : undefined}>
           Split into units
         </button>
       )}
-      <button type="button" className="ad-btn ad-btn-ghost" onClick={onClose}>{isNew || !locked ? "Cancel" : "Close"}</button>
+      <button type="button" className="adm-btn adm-btn-ghost" onClick={onClose}>{isNew || !locked ? "Cancel" : "Close"}</button>
       {!locked && (
-        <button type="button" className="ad-btn ad-btn-primary" onClick={handleSave} disabled={busy}>
+        <button type="button" className="adm-btn adm-btn-primary" onClick={handleSave} disabled={busy}>
           {busy ? "Saving..." : isNew ? "Record acquisition" : "Save changes"}
         </button>
       )}
@@ -261,16 +261,16 @@ function AcquisitionDrawer({ acquisition, isNew, acquisitions, suppliers, models
         size="lg"
       >
         {locked && (
-          <div className="ad-note">
+          <div className="adm-note">
             Units were already created from this batch, so it is read-only.{" "}
             <button type="button" className="iv-inline-link" onClick={() => onViewUnits(saved)}>View its units</button>
           </div>
         )}
         {!isNew && saved.acqStatus === "ordered" && (
-          <div className="ad-note is-warn">Mark this batch as Received when the stock arrives. Then you can split it into units.</div>
+          <div className="adm-note is-warn">Mark this batch as Received when the stock arrives. Then you can split it into units.</div>
         )}
 
-        <div className="ad-form-grid">
+        <div className="adm-form-grid">
           <Field label="Supplier" htmlFor="a-supplier" error={errors.supplierId}>
             <select id="a-supplier" value={draft.supplierId} disabled={locked} aria-invalid={!!errors.supplierId} onChange={(e) => set("supplierId", e.target.value)}>
               <option value="">Choose a supplier</option>
@@ -311,17 +311,17 @@ function AcquisitionDrawer({ acquisition, isNew, acquisitions, suppliers, models
           </Field>
         </div>
 
-        <div className="ad-section">
+        <div className="adm-section">
           <div className="iv-section-head">
-            <h3 className="ad-section-title">Items</h3>
+            <h3 className="adm-section-title">Items</h3>
             {!locked && (
-              <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm"
+              <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm"
                 onClick={() => setDraft((d) => ({ ...d, acqItems: [...d.acqItems, { modelId: "", quantity: 1, unitCost: "" }] }))}>
                 <PlusIcon /> Add item
               </button>
             )}
           </div>
-          {errors.items && <p className="ad-error" style={{ marginBottom: 10 }}>{errors.items}</p>}
+          {errors.items && <p className="adm-error" style={{ marginBottom: 10 }}>{errors.items}</p>}
 
           <div className="iv-items">
             {draft.acqItems.map((item, i) => {
@@ -345,7 +345,7 @@ function AcquisitionDrawer({ acquisition, isNew, acquisitions, suppliers, models
                   <div className="iv-item-total">
                     <span>{formatPeso((Number(item.quantity) || 0) * (Number(item.unitCost) || 0))}</span>
                     {!locked && draft.acqItems.length > 1 && (
-                      <button type="button" className="ad-icon-btn" aria-label={`Remove ${modelLabel(item.modelId) || "item"}`}
+                      <button type="button" className="adm-icon-btn" aria-label={`Remove ${modelLabel(item.modelId) || "item"}`}
                         onClick={() => setDraft((d) => ({ ...d, acqItems: d.acqItems.filter((_, idx) => idx !== i) }))}>
                         <TrashIcon />
                       </button>
@@ -370,8 +370,8 @@ function AcquisitionDrawer({ acquisition, isNew, acquisitions, suppliers, models
         size="sm"
         footer={
           <>
-            <button type="button" className="ad-btn ad-btn-ghost" onClick={() => setConfirmSplit(false)}>Cancel</button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={handleSplit} disabled={busy}>
+            <button type="button" className="adm-btn adm-btn-ghost" onClick={() => setConfirmSplit(false)}>Cancel</button>
+            <button type="button" className="adm-btn adm-btn-primary" onClick={handleSplit} disabled={busy}>
               {busy ? "Creating..." : `Create ${unitCount(saved)} units`}
             </button>
           </>

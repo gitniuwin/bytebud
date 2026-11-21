@@ -127,15 +127,15 @@ export const SearchIcon = () =>
 
 export function StatusBadge({ list, value }) {
   const item = list.find((i) => i.value === value);
-  return <span className={`ad-badge tone-${item?.tone || "grey"}`}>{item?.label ?? value ?? "-"}</span>;
+  return <span className={`adm-badge tone-${item?.tone || "grey"}`}>{item?.label ?? value ?? "-"}</span>;
 }
 
 export function Field({ label, htmlFor, error, hint, className = "", children }) {
   return (
-    <div className={`ad-field ${className}`}>
+    <div className={`adm-field ${className}`}>
       <label htmlFor={htmlFor}>{label}</label>
       {children}
-      {error ? <p className="ad-error">{error}</p> : hint ? <p className="ad-hint">{hint}</p> : null}
+      {error ? <p className="adm-error">{error}</p> : hint ? <p className="adm-hint">{hint}</p> : null}
     </div>
   );
 }
@@ -143,14 +143,14 @@ export function Field({ label, htmlFor, error, hint, className = "", children })
 export function Pagination({ page, totalPages, onChange }) {
   if (totalPages <= 1) return null;
   return (
-    <nav className="ad-pagination" aria-label="Pagination">
-      <button type="button" className="ad-btn ad-btn-ghost" onClick={() => onChange(page - 1)} disabled={page === 1}>
+    <nav className="adm-pagination" aria-label="Pagination">
+      <button type="button" className="adm-btn adm-btn-ghost" onClick={() => onChange(page - 1)} disabled={page === 1}>
         Previous
       </button>
       <span>
         Page {page} of {totalPages}
       </span>
-      <button type="button" className="ad-btn ad-btn-ghost" onClick={() => onChange(page + 1)} disabled={page === totalPages}>
+      <button type="button" className="adm-btn adm-btn-ghost" onClick={() => onChange(page + 1)} disabled={page === totalPages}>
         Next
       </button>
     </nav>
@@ -160,7 +160,7 @@ export function Pagination({ page, totalPages, onChange }) {
 export function Toast({ toast }) {
   if (!toast) return null;
   return (
-    <div className={`ad-toast ${toast.type === "error" ? "is-error" : ""}`} role="status" aria-live="polite">
+    <div className={`adm-toast ${toast.type === "error" ? "is-error" : ""}`} role="status" aria-live="polite">
       {toast.message}
     </div>
   );
@@ -224,32 +224,32 @@ export function Drawer({ open, onClose, title, subtitle, badge, tabs, activeTab,
 
   return (
     <div
-      className="ad-overlay"
+      className="adm-overlay"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <aside className="ad-drawer" role="dialog" aria-modal="true" aria-labelledby="ad-drawer-title" tabIndex={-1} ref={panelRef}>
-        <header className="ad-drawer-head">
-          <div className="ad-drawer-titles">
-            <h2 id="ad-drawer-title">{title}</h2>
+      <aside className="adm-drawer" role="dialog" aria-modal="true" aria-labelledby="adm-drawer-title" tabIndex={-1} ref={panelRef}>
+        <header className="adm-drawer-head">
+          <div className="adm-drawer-titles">
+            <h2 id="adm-drawer-title">{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
           {badge}
-          <button type="button" className="ad-icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="adm-icon-btn" onClick={onClose} aria-label="Close">
             <CloseIcon />
           </button>
         </header>
 
         {tabs && (
-          <div className="ad-subtabs" role="tablist">
+          <div className="adm-subtabs" role="tablist">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === t.key}
-                className={`ad-subtab ${activeTab === t.key ? "is-active" : ""}`}
+                className={`adm-subtab ${activeTab === t.key ? "is-active" : ""}`}
                 disabled={t.disabled}
                 onClick={() => onTabChange?.(t.key)}
               >
@@ -259,8 +259,8 @@ export function Drawer({ open, onClose, title, subtitle, badge, tabs, activeTab,
           </div>
         )}
 
-        <div className="ad-drawer-body">{children}</div>
-        {footer && <footer className="ad-drawer-foot">{footer}</footer>}
+        <div className="adm-drawer-body">{children}</div>
+        {footer && <footer className="adm-drawer-foot">{footer}</footer>}
       </aside>
     </div>
   );
@@ -274,33 +274,33 @@ export function Modal({ open, onClose, title, subtitle, badge, tabs, activeTab, 
 
   return (
     <div
-      className="ad-overlay is-center"
+      className="adm-overlay is-center"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <div className={`ad-modal size-${size}`} role="dialog" aria-modal="true" aria-labelledby="ad-modal-title" tabIndex={-1} ref={panelRef}>
-        <header className="ad-modal-head">
-          <div className="ad-modal-titles">
-            <h2 id="ad-modal-title">{title}</h2>
+      <div className={`adm-modal size-${size}`} role="dialog" aria-modal="true" aria-labelledby="adm-modal-title" tabIndex={-1} ref={panelRef}>
+        <header className="adm-modal-head">
+          <div className="adm-modal-titles">
+            <h2 id="adm-modal-title">{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
           {badge}
-          <button type="button" className="ad-icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="adm-icon-btn" onClick={onClose} aria-label="Close">
             <CloseIcon />
           </button>
         </header>
         {tabs && (
-          <div className="ad-subtabs" role="tablist">
+          <div className="adm-subtabs" role="tablist">
             {tabs.map((t) => (
               <button key={t.key} type="button" role="tab" aria-selected={activeTab === t.key}
-                className={`ad-subtab ${activeTab === t.key ? "is-active" : ""}`} disabled={t.disabled}
+                className={`adm-subtab ${activeTab === t.key ? "is-active" : ""}`} disabled={t.disabled}
                 onClick={() => onTabChange?.(t.key)}>{t.label}</button>
             ))}
           </div>
         )}
-        <div className="ad-modal-body">{children}</div>
-        {footer && <footer className="ad-modal-foot">{footer}</footer>}
+        <div className="adm-modal-body">{children}</div>
+        {footer && <footer className="adm-modal-foot">{footer}</footer>}
       </div>
     </div>
   );

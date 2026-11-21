@@ -178,8 +178,8 @@ export default function AdminDashboard({
           <p>What needs your attention today, and how the shop is doing.</p>
         </div>
       </div>
-      {loading && <p className="ad-hint">Loading current {admin.role === "staff" ? "staff" : "admin"} data...</p>}
-      {error && <div className="ad-note is-warn" role="alert">{error} <button type="button" className="ad-btn ad-btn-ghost" onClick={onRetry}>Retry</button></div>}
+      {loading && <p className="adm-hint">Loading current {admin.role === "staff" ? "staff" : "admin"} data...</p>}
+      {error && <div className="adm-note is-warn" role="alert">{error} <button type="button" className="adm-btn adm-btn-ghost" onClick={onRetry}>Retry</button></div>}
 
       {/* ---------- Task cards ---------- */}
       <section className="db-tasks" aria-label="Tasks">

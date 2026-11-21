@@ -86,19 +86,19 @@ export default function SuppliersTab({ suppliers, acquisitions, query, onSave, n
     <div className="iv-panel">
       <div className="iv-toolbar">
         <p className="iv-count">{filtered.length} {filtered.length === 1 ? "supplier" : "suppliers"}</p>
-        <button type="button" className="ad-btn ad-btn-primary" onClick={() => open(null)}>
+        <button type="button" className="adm-btn adm-btn-primary" onClick={() => open(null)}>
           <PlusIcon /> Add supplier
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="ad-empty">
+        <div className="adm-empty">
           <strong>No suppliers found</strong>
           Add the companies and people you buy stock from.
         </div>
       ) : (
-        <div className="ad-table-wrap">
-          <table className="ad-table">
+        <div className="adm-table-wrap">
+          <table className="adm-table">
             <thead>
               <tr>
                 <th>Company</th>
@@ -113,10 +113,10 @@ export default function SuppliersTab({ suppliers, acquisitions, query, onSave, n
               {rows.map((s) => (
                 <tr key={s.supplierId} onClick={() => open(s)}>
                   <td>
-                    <button type="button" className="ad-row-btn" onClick={(e) => { e.stopPropagation(); open(s); }}>
+                    <button type="button" className="adm-row-btn" onClick={(e) => { e.stopPropagation(); open(s); }}>
                       {s.companyName}
                     </button>
-                    <span className="ad-cell-sub">Added {formatDate(s.supplierCreatedAt)}</span>
+                    <span className="adm-cell-sub">Added {formatDate(s.supplierCreatedAt)}</span>
                   </td>
                   <td>{labelOf(SUPPLIER_TYPES, s.supplierType)}</td>
                   <td>{s.contact?.contactPerson || "-"}</td>
@@ -138,15 +138,15 @@ export default function SuppliersTab({ suppliers, acquisitions, query, onSave, n
         title={editing?.supplierId ? "Edit supplier" : "Add supplier"}
         footer={
           <>
-            <button type="button" className="ad-btn ad-btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
-            <button type="submit" form="supplier-form" className="ad-btn ad-btn-primary" disabled={busy}>
+            <button type="button" className="adm-btn adm-btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
+            <button type="submit" form="supplier-form" className="adm-btn adm-btn-primary" disabled={busy}>
               {busy ? "Saving..." : editing?.supplierId ? "Save changes" : "Add supplier"}
             </button>
           </>
         }
       >
         {editing && (
-          <form id="supplier-form" className="ad-form-grid" onSubmit={handleSave} noValidate>
+          <form id="supplier-form" className="adm-form-grid" onSubmit={handleSave} noValidate>
             <Field label="Company name" htmlFor="s-name" className="span-2" error={errors.companyName}>
               <input id="s-name" type="text" value={editing.companyName} aria-invalid={!!errors.companyName} onChange={(e) => set("companyName", e.target.value)} />
             </Field>

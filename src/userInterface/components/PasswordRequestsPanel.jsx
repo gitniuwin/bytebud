@@ -41,13 +41,13 @@ export default function PasswordRequestsPanel() {
   const history = rows.filter((r) => r.status !== "pending").slice(0, 10);
 
   return (
-    <section className="ad-panel">
-      <h2 className="ad-section-title">Password reset requests {waiting.length > 0 && <span className="ad-badge tone-amber">{waiting.length} waiting</span>}</h2>
-      {error && <p className="ad-error" role="alert">{error}</p>}
-      {!waiting.length && <div className="ad-empty"><strong>No requests waiting</strong>New requests from customers who forgot their password show up here.</div>}
+    <section className="adm-panel">
+      <h2 className="adm-section-title">Password reset requests {waiting.length > 0 && <span className="adm-badge tone-amber">{waiting.length} waiting</span>}</h2>
+      {error && <p className="adm-error" role="alert">{error}</p>}
+      {!waiting.length && <div className="adm-empty"><strong>No requests waiting</strong>New requests from customers who forgot their password show up here.</div>}
       {waiting.length > 0 && (
-        <div className="ad-table-wrap">
-          <table className="ad-table">
+        <div className="adm-table-wrap">
+          <table className="adm-table">
             <thead><tr><th>Customer</th><th>Email</th><th>Phone on account</th><th>Phone matched?</th><th>Orders</th><th>Requested</th><th>Actions</th></tr></thead>
             <tbody>
               {waiting.map((row) => (
@@ -55,12 +55,12 @@ export default function PasswordRequestsPanel() {
                   <td>{row.fullName}</td>
                   <td>{row.email}</td>
                   <td>{row.phone || "None saved"}</td>
-                  <td><span className={`ad-badge ${row.phoneMatched ? "tone-green" : "tone-red"}`}>{row.phoneMatched ? "Yes" : "No"}</span></td>
+                  <td><span className={`adm-badge ${row.phoneMatched ? "tone-green" : "tone-red"}`}>{row.phoneMatched ? "Yes" : "No"}</span></td>
                   <td>{row.orderCount}{row.lastOrderAt ? `, last ${formatDateTime(row.lastOrderAt)}` : ""}</td>
                   <td>{formatDateTime(row.requestedAt)}</td>
                   <td>
-                    <button className="ad-btn ad-btn-primary ad-btn-sm" disabled={busy === row.requestId} onClick={() => decide(row, "approve")}>Approve</button>{" "}
-                    <button className="ad-btn ad-btn-danger ad-btn-sm" disabled={busy === row.requestId} onClick={() => decide(row, "reject")}>Reject</button>
+                    <button className="adm-btn adm-btn-primary adm-btn-sm" disabled={busy === row.requestId} onClick={() => decide(row, "approve")}>Approve</button>{" "}
+                    <button className="adm-btn adm-btn-danger adm-btn-sm" disabled={busy === row.requestId} onClick={() => decide(row, "reject")}>Reject</button>
                   </td>
                 </tr>
               ))}
@@ -70,9 +70,9 @@ export default function PasswordRequestsPanel() {
       )}
       {history.length > 0 && (
         <>
-          <h3 className="ad-section-title" style={{ fontSize: 14, marginTop: 18 }}>Recent decisions</h3>
-          <div className="ad-table-wrap">
-            <table className="ad-table">
+          <h3 className="adm-section-title" style={{ fontSize: 14, marginTop: 18 }}>Recent decisions</h3>
+          <div className="adm-table-wrap">
+            <table className="adm-table">
               <thead><tr><th>Customer</th><th>Email</th><th>Status</th><th>Decided</th></tr></thead>
               <tbody>
                 {history.map((row) => (

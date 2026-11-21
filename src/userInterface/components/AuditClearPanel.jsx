@@ -27,14 +27,14 @@ export default function AuditClearPanel({ onDone }) {
   };
 
   return (
-    <section className="ad-panel">
-      <h2 className="ad-section-title">Clear old history</h2>
+    <section className="adm-panel">
+      <h2 className="adm-section-title">Clear old history</h2>
       <p style={{ margin: "0 0 10px", fontSize: 13.5 }}>Keep the last
-        {" "}<input className="ad-input" type="number" min="1" max="120" value={months} onChange={(e) => setMonths(e.target.value)} style={{ width: 70, height: 34, padding: "0 8px" }} aria-label="Months of history to keep" />{" "}
+        {" "}<input className="adm-input" type="number" min="1" max="120" value={months} onChange={(e) => setMonths(e.target.value)} style={{ width: 70, height: 34, padding: "0 8px" }} aria-label="Months of history to keep" />{" "}
         month(s) and delete everything older. The cleanup itself is recorded in the history.</p>
-      {error && <p className="ad-error" role="alert">{error}</p>}
+      {error && <p className="adm-error" role="alert">{error}</p>}
       {note && <p role="status">{note}</p>}
-      <button className="ad-btn ad-btn-danger ad-btn-sm" disabled={busy} onClick={clear}>{busy ? "Clearing..." : "Clear old entries"}</button>
+      <button className="adm-btn adm-btn-danger adm-btn-sm" disabled={busy} onClick={clear}>{busy ? "Clearing..." : "Clear old entries"}</button>
     </section>
   );
 }
