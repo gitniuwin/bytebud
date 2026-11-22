@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { BuyerShell, CheckIcon, ChevronIcon, ClockIcon, Field, LaptopIcon, ShieldIcon, StatusChip, TrashIcon, useNow } from "./BuyerShared";
 import { formatDate, formatPeso, formatRemaining, getPhotos, getPrice, isStudentVerified, unitName } from "./buyerUtils";
 import "./LaptopDetailPage.css";
@@ -70,6 +70,7 @@ export default function CartCheckoutPage({
   const [pickupDate, setPickupDate] = useState("");
   const pickupDateRef = useRef(null);
   const [method, setMethod] = useState("");
+  const [useCredit, setUseCredit] = useState(false);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -105,6 +106,11 @@ export default function CartCheckoutPage({
   const subtotal = active.reduce((sum, l) => sum + (l.unit.listing?.price || 0), 0);
   const payable = active.reduce((sum, l) => sum + (getPrice(l.unit, verified) || 0), 0);
   const discountTotal = Math.max(0, subtotal - payable);
+  const storeCredit = Number(user?.storeCredit) || 0;
+  const creditApplied = useCredit ? Math.min(storeCredit, payable) : 0;
+  const amountDue = payable - creditApplied;
+  // When store credit covers the whole order, no payment method is needed. Pick the first one so the order can still be placed.
+  useEffect(() => { if (amountDue === 0 && !method && paymentMethods[0]) setMethod(paymentMethods[0]); }, [amountDue, method, paymentMethods]);
   const potentialSaving = active.reduce((sum, l) => {
     const { price, studentPrice } = l.unit.listing || {};
     return studentPrice != null && price != null ? sum + Math.max(0, price - studentPrice) : sum;
@@ -151,6 +157,7 @@ export default function CartCheckoutPage({
         unitIds: active.map((l) => l.unit.unitId),
         pickupDate,
         paymentMethod: method,
+        useStoreCredit: creditApplied,
       });
       if (!result?.orderNo) throw new Error("The server did not confirm the order. Please refresh your cart and try again.");
       setPlaced({
@@ -158,6 +165,7 @@ export default function CartCheckoutPage({
         pickupDate: result?.pickupDate || pickupDate,
         paymentMethod: result?.paymentMethod || method,
         total: result?.total ?? payable,
+        storeCreditUsed: result?.storeCreditUsed ?? creditApplied,
         discountTotal: result?.discountTotal ?? discountTotal,
         itemCount: result?.itemCount ?? active.length,
       });
@@ -197,7 +205,7 @@ export default function CartCheckoutPage({
           </dl>
 
           {Object.hasOwn(transferMethods, placed.paymentMethod) && (
-            <TransferPaymentCard method={placed.paymentMethod} orderNo={placed.orderNo} total={placed.total} payment={placed.payment}
+            <TransferPaymentCard method={placed.paymentMethod} orderNo={placed.orderNo} total={placed.total - (placed.storeCreditUsed || 0)} payment={placed.payment}
               onPaymentChange={(payment) => setPlaced((current) => ({ ...current, payment }))} />
           )}
 
@@ -374,7 +382,7 @@ export default function CartCheckoutPage({
           </section>
 
           {/* ---------- Payment ---------- */}
-          <section className="cc-card" aria-labelledby="cc-pay-title">
+          {amountDue > 0 && <section className="cc-card" aria-labelledby="cc-pay-title">
             <h2 id="cc-pay-title" className="ld-h2">Payment method</h2>
             <p className="ld-muted cc-lead">Our staff will confirm your payment, and you can follow its status on your order.</p>
             <div className="cc-methods" role="radiogroup" aria-labelledby="cc-pay-title" aria-invalid={errors.method ? "true" : undefined}>
@@ -395,19 +403,26 @@ export default function CartCheckoutPage({
               ))}
             </div>
             {errors.method && <p className="by-error cc-method-error">{errors.method}</p>}
-          </section>
+          </section>}
         </div>
 
         {/* ---------- Summary ---------- */}
         <aside className="cc-summary" aria-label="Order summary">
           <h2 className="ld-h2">Order summary</h2>
 
+          {storeCredit > 0 && (
+            <label className="cc-credit">
+              <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} />
+              {" "}Use my store credit ({formatPeso(storeCredit)} available)
+            </label>
+          )}
           <dl className="cc-totals">
             <div><dt>Subtotal ({active.length} {active.length === 1 ? "laptop" : "laptops"})</dt><dd>{formatPeso(subtotal)}</dd></div>
             {verified && discountTotal > 0 && (
               <div className="is-green"><dt>Student discount</dt><dd>-{formatPeso(discountTotal)}</dd></div>
             )}
-            <div className="is-total"><dt>Total</dt><dd>{formatPeso(payable)}</dd></div>
+            {creditApplied > 0 && <div className="is-green"><dt>Store credit used</dt><dd>-{formatPeso(creditApplied)}</dd></div>}
+            <div className="is-total"><dt>Total to pay</dt><dd>{formatPeso(amountDue)}</dd></div>
           </dl>
 
           {!verified && potentialSaving > 0 && (

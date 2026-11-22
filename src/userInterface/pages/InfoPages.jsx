@@ -12,6 +12,7 @@ import "./InfoPages.css";
 const STUDENT_DISCOUNT_PERCENT = 40;
 const WARRANTY_MONTHS = 3;
 const SERVICE_MONTHS = 12;
+const RETURN_DAYS = 90;
 
 function useScrollToHash(deps) {
   useEffect(() => {
@@ -122,7 +123,7 @@ export function WarrantyPage({ pathname, ...shell }) {
 
         <Section id="returns" title="Returns">
           <p>
-            Within the {WARRANTY_MONTHS}-month warranty period you can return a laptop with a covered hardware problem.
+            Within {RETURN_DAYS} days of pickup (the {WARRANTY_MONTHS}-month warranty period) you can return a laptop with a covered hardware problem.
             We will either repair it or turn the remaining value into store credit, as described above. Returns for
             damage caused by use are not accepted under the warranty.
           </p>

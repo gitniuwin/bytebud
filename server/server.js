@@ -21,12 +21,50 @@ app.use(express.json({ limit: "8mb" }));
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ACCOUNT_PHONE_RE = /^(09\d{9}|\+639\d{9})$/;
-const parsedReturnWindow = Number.parseInt(process.env.RETURN_WINDOW_DAYS || "14", 10);
-const RETURN_WINDOW_DAYS = Number.isFinite(parsedReturnWindow) ? Math.max(0, parsedReturnWindow) : 14;
+const parsedReturnWindow = Number.parseInt(process.env.RETURN_WINDOW_DAYS || "90", 10);
+const RETURN_WINDOW_DAYS = Number.isFinite(parsedReturnWindow) ? Math.max(0, parsedReturnWindow) : 90;
 const parsedStudentDiscount = Number.parseFloat(process.env.STUDENT_DISCOUNT_PERCENT || "40");
 const STUDENT_DISCOUNT_PERCENT = Number.isFinite(parsedStudentDiscount) ? Math.min(100, Math.max(0, parsedStudentDiscount)) : 40;
 // Student price is always the regular price minus the student discount, so it can never drift from the policy.
-const studentPriceFor = (price) => Math.round((Number(price) * (100 - STUDENT_DISCOUNT_PERCENT)) / 100);
+// Minimum gross margin on every sale (default 25%, from refurbished-industry benchmarks).
+const parsedMinMargin = Number.parseFloat(process.env.MIN_MARGIN_PERCENT || "25");
+const MIN_MARGIN_PERCENT = Number.isFinite(parsedMinMargin) ? Math.min(90, Math.max(0, parsedMinMargin)) : 25;
+// Total cost of a unit = what you paid + parts and labor from repairs.
+const totalUnitCost = (costBasis, repairs) => {
+  const repairTotal = (repairs || []).reduce((sum, r) => sum + (Number(r.partCost) || 0) + (Number(r.laborCost) || 0), 0);
+  return (Number(costBasis) || 0) + repairTotal;
+};
+const parsedReserve = Number.parseFloat(process.env.RETURN_RESERVE_PERCENT || "10");
+// Share of cost set aside for returns and warranty repairs (benchmark 8 to 12 percent).
+const RETURN_RESERVE_PERCENT = Number.isFinite(parsedReserve) ? Math.min(50, Math.max(0, parsedReserve)) : 10;
+// Student price = regular price minus the student discount, but never below the profit floor.
+// Units with no recorded cost get no student discount, so nothing is sold without a known cost.
+// Admin-only profit summary for a unit. Customers never receive this.
+const unitProfit = (unit) => {
+  const totalCost = totalUnitCost(unit.costBasis, unit.repairs);
+  const regular = Number(unit.listing?.price) || 0;
+  const round1 = (value) => Math.round(value * 10) / 10;
+  const studentPrice = regular ? studentPriceFor(regular, unit.costBasis, unit.repairs) : null;
+  return {
+    totalCost,
+    regularPrice: regular,
+    profitRegular: regular - totalCost,
+    marginRegular: regular ? round1(((regular - totalCost) / regular) * 100) : null,
+    studentPrice,
+    profitStudent: studentPrice != null ? studentPrice - totalCost : null,
+    lowestStudentPrice: totalCost > 0 ? Math.ceil((totalCost * (1 + RETURN_RESERVE_PERCENT / 100)) / (1 - MIN_MARGIN_PERCENT / 100)) : null,
+    minMarginPercent: MIN_MARGIN_PERCENT,
+  };
+};
+const studentPriceFor = (price, costBasis, repairs) => {
+  const regular = Number(price);
+  const cost = totalUnitCost(costBasis, repairs);
+  if (!(cost > 0)) return regular;
+  const discounted = Math.round((regular * (100 - STUDENT_DISCOUNT_PERCENT)) / 100);
+  const costWithReserve = cost * (1 + RETURN_RESERVE_PERCENT / 100);
+  const floor = Math.ceil(costWithReserve / (1 - MIN_MARGIN_PERCENT / 100));
+  return Math.max(discounted, floor);
+};
 const RESET_PENDING_MS = 3 * 24 * 60 * 60 * 1000; // a request waits up to 3 days for review
 const RESET_APPROVAL_MS = 24 * 60 * 60 * 1000; // an approved request can be used for 24 hours
 const sha256 = (value) => createHash("sha256").update(String(value)).digest("hex");
@@ -45,6 +83,8 @@ const publicUser = (user) => ({
   phone: user.phone,
   email: user.email,
   role: user.role,
+  storeCredit: user.storeCredit || 0,
+  creditHistory: (user.creditHistory || []).slice(-30).reverse(),
 });
 
 // Latest verification of a user (or null). Used for student pricing on the Home page.
@@ -165,10 +205,10 @@ app.get("/api/catalog/home", async (_req, res) => {
       courses: courses.map(({ _id, ...course }) => ({ courseId: String(_id), ...course })),
       units: units
         .filter((unit) => unit.modelId)
-        .map(({ _id, modelId, ...unit }) => ({
+        .map(({ _id, modelId, costBasis, repairs, ...unit }) => ({
           unitId: String(_id),
           ...unit,
-          listing: { ...unit.listing, studentPrice: studentPriceFor(unit.listing.price) },
+          listing: { ...unit.listing, studentPrice: studentPriceFor(unit.listing.price, costBasis, repairs) },
           modelId: String(modelId._id),
           model: {
             modelId: String(modelId._id),
@@ -295,7 +335,7 @@ app.post("/api/orders", requireAuth, requireBuyer, async (req, res) => {
       let discountTotal = 0;
       const orderItems = orderedUnits.map((unit) => {
         const priceAtSale = unit.listing.price;
-        const discountedPrice = studentVerified ? Math.min(priceAtSale, studentPriceFor(priceAtSale)) : priceAtSale;
+        const discountedPrice = studentVerified ? Math.min(priceAtSale, studentPriceFor(priceAtSale, unit.costBasis, unit.repairs)) : priceAtSale;
         const discountAmount = Math.max(0, priceAtSale - discountedPrice);
         subtotal += priceAtSale;
         discountTotal += discountAmount;
@@ -312,6 +352,11 @@ app.post("/api/orders", requireAuth, requireBuyer, async (req, res) => {
         };
       });
 
+      const totalDue = Math.max(0, subtotal - discountTotal);
+      const buyerCredit = await User.findById(req.user._id).select("storeCredit").session(txSession);
+      const requestedCredit = Math.max(0, Number(req.body?.useStoreCredit) || 0);
+      const creditApplied = Math.round(Math.min(requestedCredit, buyerCredit?.storeCredit || 0, totalDue));
+      const payDue = totalDue - creditApplied;
       const orderNo = `BB-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
       const orderData = {
         orderNo,
@@ -322,11 +367,24 @@ app.post("/api/orders", requireAuth, requireBuyer, async (req, res) => {
         total: Math.max(0, subtotal - discountTotal),
         orderStatus: "pending",
         pickupDate,
-        payment: { method: paymentMethod, payStatus: "pending" },
+        storeCreditUsed: creditApplied,
+        payment: payDue > 0 ? { method: paymentMethod, payStatus: "pending" } : { method: "Store credit", payStatus: "paid" },
         statusHistory: [{ newStatus: "pending", changedBy: req.user._id, changedAt: now }],
         orderItems,
       };
       const [order] = await Order.create([orderData], { session: txSession });
+      if (creditApplied > 0) {
+        const deducted = await User.updateOne(
+          { _id: req.user._id, storeCredit: { $gte: creditApplied } },
+          { $inc: { storeCredit: -creditApplied }, $push: { creditHistory: { amount: -creditApplied, type: "checkout", note: `Used on order ${orderNo}`, orderNo, at: now } } },
+          { session: txSession }
+        );
+        if (!deducted.modifiedCount) {
+          const error = new Error("Your store credit changed. Please try again.");
+          error.status = 409;
+          throw error;
+        }
+      }
 
       for (const unit of orderedUnits) {
         unit.unitStatus = "sold";
@@ -342,6 +400,7 @@ app.post("/api/orders", requireAuth, requireBuyer, async (req, res) => {
         paymentMethod: order.payment.method,
         total: order.total,
         discountTotal: order.discountTotal,
+        storeCreditUsed: order.storeCreditUsed,
         itemCount: order.orderItems.length,
         cartItems: cart.cartItems.map((item) => ({ unitId: String(item.unitId), addedAt: item.addedAt })),
       };
@@ -771,7 +830,7 @@ app.get("/api/admin/data", requireAuth, requireStaff, async (req, res) => {
       const docs = await query.sort({ _id: -1 }).lean();
       result[name] = docs.map((doc) => {
         const record = serialize(name, doc);
-        if (name === "units" && req.user.role !== "admin") delete record.costBasis;
+        if (name === "units" && req.user.role !== "admin") { delete record.costBasis; delete record.repairs; } if (name === "units" && req.user.role === "admin") record.profit = unitProfit(doc);
         return record;
       });
     }));
@@ -879,6 +938,28 @@ app.post("/api/admin/audit-logs/clear", requireAuth, requireAdmin, async (req, r
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Could not clear the history." });
+  }
+});
+
+// Admin adds or deducts store credit for a customer. Every change needs a reason and is recorded.
+app.post("/api/admin/users/:id/store-credit", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const amount = Math.round(Number(req.body?.amount));
+    const note = String(req.body?.note || "").trim();
+    if (!Number.isFinite(amount) || amount === 0) return res.status(400).json({ message: "Enter an amount to add or deduct." });
+    if (!note) return res.status(400).json({ message: "Enter the reason for this change." });
+    const doc = await User.findById(req.params.id);
+    if (!doc || doc.role !== "buyer") return res.status(404).json({ message: "Customer not found." });
+    if ((doc.storeCredit || 0) + amount < 0) return res.status(400).json({ message: "This would make the balance negative." });
+    const before = doc.toObject();
+    doc.storeCredit = (doc.storeCredit || 0) + amount;
+    doc.creditHistory.push({ amount, type: "admin", note, at: new Date(), byAdminId: req.user._id });
+    await doc.save();
+    await writeAudit(req, "update", "users", doc, before);
+    res.json({ storeCredit: doc.storeCredit });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Could not update store credit." });
   }
 });
 
@@ -1005,6 +1086,9 @@ app.patch("/api/admin/orders/:id/returns/:index", requireAuth, requireStaff, asy
     await order.save();
     await writeAudit(req, "update", "orders", order, before);
     if (status === "approved") {
+      if (refund > 0) {
+        await User.updateOne({ _id: order.userId }, { $inc: { storeCredit: refund }, $push: { creditHistory: { amount: refund, type: "return", note: `Return on order ${order.orderNo}`, orderNo: order.orderNo, at: new Date(), byAdminId: req.user._id } } });
+      }
       const unit = await Unit.findById(item.returnUnitId);
       if (unit) {
         const unitBefore = unit.toObject();
@@ -1030,6 +1114,23 @@ app.patch("/api/admin/warranties/:id/claims/:index", requireAuth, requireStaff, 
     if (!status || !["filed", "in_review", "approved", "rejected", "resolved"].includes(status))
       return res.status(400).json({ message: "Choose a valid claim status." });
     const before = warranty.toObject();
+    // Hardware failure that cannot be fixed: credit = price paid minus the value of the damaged parts.
+    const damaged = req.body?.damagedPartsValue;
+    if (damaged !== undefined && damaged !== null && damaged !== "") {
+      if (req.user.role !== "admin") return res.status(403).json({ message: "Only an admin can issue store credit." });
+      if (claim.creditIssuedAt) return res.status(409).json({ message: "Store credit was already issued for this claim." });
+      const damagedValue = Math.round(Number(damaged));
+      if (!Number.isFinite(damagedValue) || damagedValue < 0) return res.status(400).json({ message: "Enter the value of the damaged parts (0 or more)." });
+      const order = await Order.findById(warranty.orderId);
+      const item = order?.orderItems.find((it) => String(it.unitId) === String(warranty.unitId));
+      if (!item) return res.status(400).json({ message: "Could not find the sale for this warranty." });
+      const paid = Math.max(0, (item.priceAtSale || 0) - (item.discountAmount || 0));
+      const credit = Math.max(0, paid - damagedValue);
+      claim.damagedPartsValue = damagedValue;
+      claim.creditIssued = credit;
+      claim.creditIssuedAt = new Date();
+      await User.updateOne({ _id: warranty.userId }, { $inc: { storeCredit: credit }, $push: { creditHistory: { amount: credit, type: "warranty", note: `Warranty ${claim.claimNo}: paid PHP ${paid} minus damaged parts PHP ${damagedValue}`, orderNo: order.orderNo, at: new Date(), byAdminId: req.user._id } } });
+    }
     claim.claimStatus = status;
     claim.handledBy = req.user._id;
     claim.resolution = String(req.body?.resolution || "");
@@ -1073,7 +1174,7 @@ app.get("/api/admin/:collection", requireAuth, requireStaff, async (req, res, ne
     const docs = await Model.find().sort({ _id: -1 });
     res.json(docs.map((doc) => {
       const record = serialize(collection, doc);
-      if (collection === "units" && req.user.role !== "admin") delete record.costBasis;
+      if (collection === "units" && req.user.role !== "admin") { delete record.costBasis; delete record.repairs; } if (collection === "units" && req.user.role === "admin") record.profit = unitProfit(doc);
       return record;
     }));
   } catch (error) {
@@ -1163,6 +1264,9 @@ app.patch("/api/admin/:collection/:id", requireAuth, requireStaff, async (req, r
         }
       }
       if (nextStatus === "cancelled") {
+        if (doc.storeCreditUsed > 0) {
+          await User.updateOne({ _id: doc.userId }, { $inc: { storeCredit: doc.storeCreditUsed }, $push: { creditHistory: { amount: doc.storeCreditUsed, type: "cancelled", note: `Order ${doc.orderNo} cancelled`, orderNo: doc.orderNo, at: new Date(), byAdminId: req.user._id } } });
+        }
         for (const item of doc.orderItems) {
           const unit = await Unit.findById(item.unitId);
           if (!unit) continue;

@@ -178,6 +178,7 @@ export default function UnitsTab({
                 <th>Grade</th>
                 <th>Status</th>
                 {isAdmin && <th className="num">Cost basis</th>}
+                {isAdmin && <th className="num">Profit</th>}
                 <th className="num">Listing price</th>
               </tr>
             </thead>
@@ -194,6 +195,7 @@ export default function UnitsTab({
                   <td>{u.conditionGrade ? `Grade ${u.conditionGrade}` : "-"}</td>
                   <td><StatusBadge list={UNIT_STATUSES} value={u.unitStatus} /></td>
                   {isAdmin && <td className="num">{formatPeso(u.costBasis)}</td>}
+                  {isAdmin && <td className="num">{u.profit && u.profit.regularPrice > 0 ? <>{formatPeso(u.profit.profitRegular)}<span className="adm-cell-sub">{u.profit.marginRegular ?? "-"}% margin</span></> : "-"}</td>}
                   <td className="num">{formatPeso(u.listing?.price)}</td>
                 </tr>
               ))}
@@ -646,6 +648,11 @@ function UnitDrawer({ unit, isNew, units, models, acquisitions, users, admin, is
             <div><dt>Cost basis</dt><dd>{formatPeso(saved.costBasis)}</dd></div>
             <div><dt>Repairs</dt><dd>{formatPeso(repairTotal)}</dd></div>
             <div><dt>Total cost</dt><dd>{formatPeso((Number(saved.costBasis) || 0) + repairTotal)}</dd></div>
+            {saved.profit && <>
+              <div><dt>Profit at listing price</dt><dd>{formatPeso(saved.profit.profitRegular)} ({saved.profit.marginRegular ?? "-"}%)</dd></div>
+              <div><dt>Student price now</dt><dd>{formatPeso(saved.profit.studentPrice)} (profit {formatPeso(saved.profit.profitStudent)})</dd></div>
+              <div><dt>Lowest allowed student price</dt><dd>{saved.profit.lowestStudentPrice ? formatPeso(saved.profit.lowestStudentPrice) : "-"} (keeps {saved.profit.minMarginPercent}% margin)</dd></div>
+            </>}
           </dl>}
 
           {saved.unitStatus === "in_repair" && !repairForm && (

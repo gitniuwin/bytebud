@@ -19,6 +19,8 @@ const userSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true, default: "" },
     passwordHash: { type: String, required: true },
+    storeCredit: { type: Number, default: 0, min: 0 },
+    creditHistory: { type: [Schema.Types.Mixed], default: [] },
     role: { type: String, enum: ["buyer", "staff", "admin"], default: "buyer" },
     isActive: { type: Boolean, default: true },
   },
@@ -272,6 +274,7 @@ const orderSchema = new Schema(
     verificationId: { type: ObjectId, ref: "StudentVerification", default: null },
     subtotal: nonNegative,
     discountTotal: { type: Number, min: 0, default: 0 },
+    storeCreditUsed: { type: Number, min: 0, default: 0 },
     total: nonNegative,
     orderStatus: { type: String, required: true, trim: true },
     pickupDate: { type: Date, default: null },
@@ -295,6 +298,9 @@ const warrantyClaimSchema = embedded({
   claimResolvedAt: { type: Date, default: null },
   resolution: { type: String, default: "" },
   handledBy: { type: ObjectId, ref: "User", default: null },
+  damagedPartsValue: { type: Number, min: 0, default: 0 },
+  creditIssued: { type: Number, min: 0, default: 0 },
+  creditIssuedAt: { type: Date, default: null },
 });
 
 const warrantySchema = new Schema(

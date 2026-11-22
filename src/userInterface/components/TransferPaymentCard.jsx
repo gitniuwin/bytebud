@@ -13,6 +13,8 @@ const bankName = import.meta.env.VITE_BANK_NAME?.trim();
 const bankAccountName = import.meta.env.VITE_BANK_ACCOUNT_NAME?.trim();
 const bankAccountNumber = import.meta.env.VITE_BANK_ACCOUNT_NUMBER?.trim();
 
+// GCash: step 1 shows the QR and amount, step 2 asks for the reference number.
+// Bank transfer keeps the instructions and the reference field on one screen.
 export default function TransferPaymentCard({ method, orderNo, total, payment, onPaymentChange }) {
   const isGCash = method === "GCash";
   const accountName = isGCash ? merchantName : bankAccountName;
@@ -20,12 +22,16 @@ export default function TransferPaymentCard({ method, orderNo, total, payment, o
   const qr = isGCash ? merchantQR : undefined;
   const configured = isGCash ? paymentConfigured : bankName && accountName && accountNumber;
   const referenceId = useId();
+  const [step, setStep] = useState(isGCash ? "pay" : "reference");
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const paid = payment?.payStatus === "paid";
   const awaitingReview = payment?.payStatus === "under_review" || Boolean(payment?.reference);
+
+  const showInstructions = !isGCash || step === "pay";
+  const showForm = !isGCash || step === "reference";
 
   const copyNumber = async () => {
     try {
@@ -67,8 +73,11 @@ export default function TransferPaymentCard({ method, orderNo, total, payment, o
           {payment.reference && <p>Reference {payment.reference}</p>}
         </div>
         : <div className="transfer-instructions">
-          {configured ? <>
-            <p>{isGCash ? "Send the exact total in GCash, then enter the reference from your receipt."
+          {!configured && <p>Payment instructions are unavailable. Check this order again once ByteBud has set up this payment method.</p>}
+
+          {configured && showInstructions && <>
+            <p>{isGCash
+              ? `Scan the QR code or send exactly ${formatPeso(total)} to the GCash number below. Then click Next and enter the reference number from your receipt.`
               : "Transfer the exact total to this account, then enter the reference from your bank receipt."}</p>
             {qr && <div className="transfer-qr">
               <img src={qr} alt="ByteBud GCash payment QR code" />
@@ -82,18 +91,21 @@ export default function TransferPaymentCard({ method, orderNo, total, payment, o
               </dd></div>}
             </dl>
             {copyMessage && <p role="status">{copyMessage}</p>}
-          </> : <p>Payment instructions are unavailable. Check this order again once ByteBud has set up this payment method.</p>}
-          <form className="transfer-form" onSubmit={submit}>
+            {isGCash && <button type="button" className="by-btn by-btn-primary" onClick={() => setStep("reference")}>Next: enter reference number</button>}
+          </>}
+
+          {configured && showForm && <form className="transfer-form" onSubmit={submit}>
             <label htmlFor={referenceId}>{isGCash ? "GCash reference number" : "Bank transaction reference"}</label>
             <input id={referenceId} value={reference} onChange={(event) => setReference(event.target.value)}
               placeholder="Enter the reference from your receipt" inputMode={isGCash ? "numeric" : "text"}
               pattern={isGCash ? "[0-9]{6,32}" : undefined} maxLength={isGCash ? 32 : 64}
-              required disabled={!configured || busy} />
+              required disabled={busy} />
             {error && <p role="alert">{error}</p>}
-            <button type="submit" className="by-btn by-btn-primary" disabled={!configured || busy}>
+            <button type="submit" className="by-btn by-btn-primary" disabled={busy}>
               {busy ? "Submitting…" : "Submit payment details"}
             </button>
-          </form>
+            {isGCash && <button type="button" className="by-btn by-btn-ghost by-btn-sm" onClick={() => setStep("pay")}>Back to payment details</button>}
+          </form>}
         </div>}
     </section>
   );

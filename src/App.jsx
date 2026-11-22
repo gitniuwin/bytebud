@@ -129,6 +129,7 @@ export default function App() {
   };
   const submitOrder = async (payload) => {
     const result = await placeOrder(payload);
+    if (result.storeCreditUsed > 0) setSession((prev) => (prev ? { ...prev, user: { ...prev.user, storeCredit: (prev.user.storeCredit || 0) - result.storeCreditUsed } } : prev));
     setCartItems(result.cartItems || []);
     await refreshCatalog().catch(() => {});
     return result;

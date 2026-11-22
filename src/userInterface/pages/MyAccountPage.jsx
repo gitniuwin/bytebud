@@ -752,6 +752,18 @@ function ProfileTab({ user, onSave, onChangePassword, onDelete, hasActivity, not
         </form>
       </section>
 
+      <section className="ma-card" aria-labelledby="ma-credit-title">
+        <h2 id="ma-credit-title" className="ma-h2">Store credit</h2>
+        <p className="ma-muted">Your balance is <strong>{formatPeso(user?.storeCredit || 0)}</strong>. Store credit does not expire and cannot be paid out as cash.</p>
+        {(user?.creditHistory || []).length > 0 && (
+          <ul className="ma-muted">
+            {user.creditHistory.map((entry, index) => (
+              <li key={index}>{entry.amount > 0 ? "+" : "-"}{formatPeso(Math.abs(entry.amount))}: {entry.note}</li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="ma-card" aria-labelledby="ma-delete-title">
         <h2 id="ma-delete-title" className="ma-h2">Delete account</h2>
         {hasActivity ? (

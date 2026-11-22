@@ -3,7 +3,13 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { demoCatalogOnlyModels, demoCourses, demoUnits } from "../Homedemodata.js";
+import { demoCourses, demoUnits as allDemoUnits } from "../Homedemodata.js";
+
+// Local test set: 20 laptops only. Change this number to load more or fewer demo units.
+const DEMO_UNIT_LIMIT = 20;
+// Keeps units u1 to u20 (the orders and warranties in this seed use u13 to u19).
+const demoUnits = allDemoUnits.filter((unit) => Number(unit.unitId.slice(1)) <= DEMO_UNIT_LIMIT);
+const demoCatalogOnlyModels = [];
 import {
   Acquisition, AuditLog, Cart, Course, LaptopModel, Order, PasswordReset,
   StudentVerification, Supplier, Unit, User, Warranty,
@@ -114,6 +120,9 @@ try {
       }
       items = [...grouped.values()];
     }
+    // Skip models that are not in this 20-laptop set (for example catalog-only models).
+    items = items.filter((item) => modelsByDemoId.has(item.modelId));
+    if (!items.length) continue;
     const acqItems = items.map((item) => ({ modelId: modelsByDemoId.get(item.modelId)._id, quantity: item.quantity, unitCost: item.unitCost }));
     const totalCost = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
     const saved = await upsert(Acquisition, { invoiceNo: plan.invoiceNo }, {
@@ -203,7 +212,7 @@ try {
 
   /* ---------- carts (the two reserved units are held in buyers' carts) ---------- */
   await upsert(Cart, { userId: buyers.juan._id }, { userId: buyers.juan._id, cartItems: [{ unitId: unitsByDemoId.get("u8")._id, addedAt: daysAgo(0) }] });
-  await upsert(Cart, { userId: buyers.maria._id }, { userId: buyers.maria._id, cartItems: [{ unitId: unitsByDemoId.get("u24")._id, addedAt: daysAgo(0) }] });
+  await upsert(Cart, { userId: buyers.maria._id }, { userId: buyers.maria._id, cartItems: [{ unitId: unitsByDemoId.get("u20")._id, addedAt: daysAgo(0) }] });
 
   /* ---------- orders ---------- */
   const demoById = new Map(demoUnits.map((unit) => [unit.unitId, unit]));
@@ -321,7 +330,7 @@ try {
       changes: { before: { acqStatus: "received" }, after: { acqStatus: "split" } },
     })),
     { action: "update", targetCollection: "units", doc: unitsByDemoId.get("u1"), at: daysAgo(40), changes: { before: { unitStatus: "ready" }, after: { unitStatus: "available" } } },
-    { action: "update", targetCollection: "units", doc: unitsByDemoId.get("u27"), at: daysAgo(6), changes: { before: { unitStatus: "awaiting_inspection" }, after: { unitStatus: "in_repair" } } },
+    { action: "update", targetCollection: "units", doc: unitsByDemoId.get("u12"), at: daysAgo(6), changes: { before: { unitStatus: "awaiting_inspection" }, after: { unitStatus: "in_repair" } } },
     { action: "update", targetCollection: "student_verifications", doc: verifications.juan, at: daysAgo(59), changes: { before: { verifStatus: "pending" }, after: { verifStatus: "approved" } } },
     { action: "update", targetCollection: "student_verifications", doc: verifications.pedro, at: daysAgo(19), changes: { before: { verifStatus: "pending" }, after: { verifStatus: "rejected" } } },
     { action: "update", targetCollection: "orders", doc: ordersByNo.get("BB-DEMO-0002"), at: daysAgo(38), changes: { before: { orderStatus: "ready_for_pickup" }, after: { orderStatus: "picked_up" } } },
